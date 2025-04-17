@@ -1,5 +1,7 @@
 ####################################################
-#' function that run the calibration
+#' Run calibration
+#'
+#' This function runs the calibration (aka parametric bootstrap) to obtain the calibrated posterior predictive p-value.
 #'
 #' @param data: original data
 #' @param nCalibrationReplicates: number of calibration replicates
@@ -11,6 +13,7 @@
 #' @param ...: additional arguments to be passed
 #'
 #'
+#' @export
 
 runCalibration <- function(data,
                            nCalibrationReplicates = 100,
@@ -60,6 +63,8 @@ runCalibration <- function(data,
 }
 
 #######################################
+#' Calculate the calibrated posterior predictive p-values
+#'
 #' function that calculate the cppp samples from the posterior predictive
 #' and calculate the cppp
 #'
@@ -73,6 +78,7 @@ runCalibration <- function(data,
 #' @param ...: additional arguments to be passed
 #'
 #'
+#' @export
 
 calculateCPPP <- function(data,
                           nCalibrationReplicates = 100,

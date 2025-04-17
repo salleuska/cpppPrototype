@@ -1,3 +1,6 @@
+###########
+#' Compute the posterior predictive p
+#'
 #' function that simulate samples from the posterior predictive and calculate summaries
 #'
 #' @param data: original data
@@ -9,6 +12,7 @@
 #'
 #' @return list containing the p-value, sampled discrepancies and original one
 #'
+#' @export
 
 calculatePPP <- function(data, origMCMCSamples, ndraws, sampleFromPP, discrepancy, ...) {
   ## Assumption:  one discrepancy with univariate output, do not depend on parameters
