@@ -91,7 +91,7 @@ calculateCPPP <- function(data,
                           origMCMCSamples,
                           ...) {
 
-  #### Resumee here
+  #### Resume here
   ## calculatePPP on the original data if not provided
   pppOriginal <- calculatePPP(data, origMCMCSamples,
                               ndraws = dim(origMCMCSamples)[1],
