@@ -30,7 +30,6 @@ hist(res$sampledDisc, breaks= 20)
 abline(v = res$discData, col = "red")
 
 
-
 ##########################
 sampleFromPosterior <- function(nSamples, data, params, ... ) {
   res <- matrix(NA, nSamples, length(params))
@@ -45,13 +44,14 @@ sampleFromPosterior <- function(nSamples, data, params, ... ) {
   res
 }
 
+
 # nCalibrationReplicates = 10
 # origMCMCSamples = samples
 # newData <- sampleFromPP(nObs = 10, origMCMCSamples[1, ])
 # sampleFromPosterior(nSamples = 10, data, params = c("mu", "s2"))
 
 
-runCalibration(data = data,
+calibratedSamples <- runCalibration(data = data,
                nCalibrationReplicates = 100,
                MCMCcontrol = list(niter = 200,
                                   thin = 1,
@@ -59,7 +59,9 @@ runCalibration(data = data,
                sampleFromPosterior,
                sampleFromPP,
                discrepancy,
-               origMCMCSamples)
+               origMCMCSamples = samples)
+
+hist(calibratedSamples, breaks= 20)
 
 
 calculateCPPP(data = data,
@@ -70,4 +72,4 @@ calculateCPPP(data = data,
               sampleFromPosterior,
               sampleFromPP,
               discrepancy,
-              origMCMCSamples)
+              origMCMCSamples = samples)
