@@ -1,18 +1,31 @@
 Package: cpppPrototype
-Title: What the Package Does (One Line, Title Case)
+Title: Posterior Predictive Checks and Calibrated P-values
 Version: 0.0.0.9000
-Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"),
+Authors@R: c(
+    person("Sally", "Paganin", email = "paganin.1@osu.edu",
+           role = c("aut", "cre"), comment = c(ORCID = "YOUR-ORCID-ID")),
+    person("Perry", "de Valpine", role = "aut",
+           comment = c(ORCID = "YOUR-ORCID-ID")),
+    person("Daniel", "Turek", role = "aut",
            comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+)
+Maintainer: Sally Paganin <paganin.1@osu.edu>
+Description: Tools for performing posterior predictive checks and computing 
+    calibrated posterior predictive p-values (cPPP) in Bayesian models. 
+    Includes infrastructure for calibration loops, diagnostic summaries, and 
+    NIMBLE-based examples.
+License: MIT + file LICENSE
 Encoding: UTF-8
+Depends:
+    R (>= 4.1)
+Imports:
+    methods,
+    stats,
+    nimble
+Suggests: 
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
-Depends:
-    nimble
-Imports:
-    R6
-Suggests: 
-    testthat (>= 3.0.0)

@@ -1,0 +1,10 @@
+^\.devcontainer$
+^README\.Rmd$
+^README\.md$
+^LICENSE\.md$
+^\.Rproj\.user$
+^.*\.Rproj$
+^doc$
+^Meta$
+^\.vscode$
+^\.DS_Store$
