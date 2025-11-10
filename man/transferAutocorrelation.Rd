@@ -9,9 +9,9 @@ transferAutocorrelation(deltaChain, pppObs, pppRep, mTilde, ...)
 \arguments{
 \item{deltaChain}{Data or structure containing \eqn{D(y^{rep}, \theta) - D(y^{obs}, \theta)} values.}
 
-\item{pppObs}{Numeric scalar in \link{0,1}.}
+\item{pppObs}{Numeric scalar in  \eqn{[0,1]}.}
 
-\item{pppRep}{Numeric vector in \link{0,1}.}
+\item{pppRep}{Numeric vector in  \eqn{[0,1]}.}
 
 \item{mTilde}{Numeric vector or scalar; effective Monte Carlo sample size per replication.}
 

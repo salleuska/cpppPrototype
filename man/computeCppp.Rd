@@ -7,9 +7,9 @@
 computeCppp(pppObs, pppRep)
 }
 \arguments{
-\item{pppObs}{Numeric scalar in \link{0,1}; observed PPP.}
+\item{pppObs}{Numeric scalar in \eqn{[0,1]}; observed PPP.}
 
-\item{pppRep}{Numeric vector in \link{0,1}; calibration PPPs.}
+\item{pppRep}{Numeric vector in \eqn{[0,1]}; calibration PPPs.}
 }
 \value{
 Numeric scalar; calibrated PPP.

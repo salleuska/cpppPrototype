@@ -2,8 +2,8 @@
 
 #' Compute calibrated posterior predictive p-value (placeholder)
 #'
-#' @param pppObs Numeric scalar in [0,1]; observed PPP.
-#' @param pppRep Numeric vector in [0,1]; calibration PPPs.
+#' @param pppObs Numeric scalar in \eqn{[0,1]}; observed PPP.
+#' @param pppRep Numeric vector in \eqn{[0,1]}; calibration PPPs.
 #' @return Numeric scalar; calibrated PPP.
 #' @export
 computeCppp <- function(pppObs, pppRep) {
@@ -17,8 +17,8 @@ computeCppp <- function(pppObs, pppRep) {
 #' autocorrelation from the observed Delta-chain
 #'
 #' @param deltaChain Data or structure containing \eqn{D(y^{rep}, \theta) - D(y^{obs}, \theta)} values.
-#' @param pppObs Numeric scalar in [0,1].
-#' @param pppRep Numeric vector in [0,1].
+#' @param pppObs Numeric scalar in  \eqn{[0,1]}.
+#' @param pppRep Numeric vector in  \eqn{[0,1]}.
 #' @param mTilde Numeric vector or scalar; effective Monte Carlo sample size per replication.
 #' @param ... Additional arguments (future use).
 #'
