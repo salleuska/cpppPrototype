@@ -3,26 +3,27 @@
 #' Compute calibrated posterior predictive p-value (placeholder)
 #'
 #' @param pppObs Numeric scalar in [0,1]; observed PPP.
-#' @param pppCal Numeric vector in [0,1]; calibration PPPs.
+#' @param pppRep Numeric vector in [0,1]; calibration PPPs.
 #' @return Numeric scalar; calibrated PPP.
 #' @export
-computeCppp <- function(pppObs, pppCal) {
+computeCppp <- function(pppObs, pppRep) {
   stop("Not implemented", call. = FALSE)
 }
 
-#' Transfer-ESS variance computation (placeholder)
+
+#' Estimate transfer autocorrelation (placeholder)
 #'
-#' To be implemented: estimates the standard error and diagnostics
-#' based on transfer-ESS and the Δ-chain mapping.
+#' Placeholder for the function that will estimate the transfer
+#' autocorrelation from the observed Delta-chain
 #'
-#' @param deltaChain Placeholder for Δ-chain or required inputs.
+#' @param deltaChain Data or structure containing \eqn{D(y^{rep}, \theta) - D(y^{obs}, \theta)} values.
 #' @param pppObs Numeric scalar in [0,1].
-#' @param pppCal Numeric vector in [0,1].
-#' @param mTilde Integer or vector of MC sample sizes.
-#' @param c Numeric tuning constant (default 1.3).
-#' @param ... Additional options.
-#' @return List with `se` and diagnostics (to be defined).
+#' @param pppRep Numeric vector in [0,1].
+#' @param mTilde Numeric vector or scalar; effective Monte Carlo sample size per replication.
+#' @param ... Additional arguments (future use).
+#'
+#' @return List with components to be defined (e.g., `iact`, `essTransfer`).
 #' @export
-transferEssVariance <- function(deltaChain, pppObs, pppCal, mTilde, c = 1.3, ...) {
+transferAutocorrelation <- function(deltaChain, pppObs, pppRep, mTilde, ...) {
   stop("Not implemented", call. = FALSE)
 }
