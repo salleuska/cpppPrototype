@@ -36,4 +36,5 @@ runCalibration <- function(MCMC_samples,
     ppp[i]       <-  mean(discrepancies$rep >= discrepancies$obs, na.rm = TRUE)
   ## return list of ppp
   ppp
+  }
 }
