@@ -23,10 +23,10 @@ new_cppresults(
 each replication and dataset (observed and simulated).}
 
 \item{...}{Additional elements to store in the object.
-SP E.g., do we want to save in this object functions used in the pipelie?}
+SP E.g., do we want to save in this object functions used in the pipeline?}
 }
 \value{
-An object of class \code{cppresults}.
+An object of class \code{cpppResult}.
 }
 \description{
 Constructs an S3 object of class \code{cpppResult}, which stores the results
