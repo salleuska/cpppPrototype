@@ -4,11 +4,9 @@ Version: 0.0.0.9000
 Authors@R: 
     c(
       person("Sally", "Paganin", email = "paganin.1@osu.edu",
-             role = c("aut", "cre"), comment = c(ORCID = "YOUR-ORCID-ID")),
-      person("Perry", "de Valpine", role = "aut",
-             comment = c(ORCID = "YOUR-ORCID-ID")),
-      person("Daniel", "Turek", role = "aut",
-             comment = c(ORCID = "YOUR-ORCID-ID"))
+             role = c("aut", "cre")),
+      person("Perry", "de Valpine", role = "aut"),
+      person("Daniel", "Turek", role = "aut")
     )
 Maintainer: Sally Paganin <paganin.1@osu.edu>
 Description: Tools for performing posterior predictive checks and computing 

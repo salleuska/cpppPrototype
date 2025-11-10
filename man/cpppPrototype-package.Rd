@@ -17,12 +17,12 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Sally Paganin \email{paganin.1@osu.edu} (\href{https://orcid.org/YOUR-ORCID-ID}{ORCID})
+\strong{Maintainer}: Sally Paganin \email{paganin.1@osu.edu}
 
 Authors:
 \itemize{
-  \item Perry de Valpine (\href{https://orcid.org/YOUR-ORCID-ID}{ORCID})
-  \item Daniel Turek (\href{https://orcid.org/YOUR-ORCID-ID}{ORCID})
+  \item Perry de Valpine
+  \item Daniel Turek
 }
 
 }
