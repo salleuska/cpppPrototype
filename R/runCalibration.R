@@ -17,6 +17,7 @@
 #' @param ... Not used currently.
 #'
 #' @return A list (later your cpppResults) with observed discrepancies and replicated discrepancies / PPP skeleton.
+
 runCalibration <- function(
     MCMC_samples,
     observed_data,
@@ -28,92 +29,79 @@ runCalibration <- function(
     control = list(),
     ...
 ) {
-
   MCMC_samples <- as.matrix(MCMC_samples)
   n_draws      <- nrow(MCMC_samples)
 
-  ## Check that MCMC samples has at leaset one row
-  if (n_draws < 1L) {
-    stop("MCMC_samples must contain at least one row.")
-  }
+  if (n_draws < 1L) stop("MCMC_samples must contain at least one row.")
 
-  ## 1. Choose which posterior draws seed the calibration replications
+  ## 1. Choose rows to seed calibration worlds
   if (is.null(row_selector)) {
-    # Default: evenly spaced draws across the chain
     row_indices <- floor(seq(1, n_draws, length.out = n_reps))
   } else {
     row_indices <- row_selector(MCMC_samples, n_reps, control)
   }
-
   if (length(row_indices) != n_reps) {
     stop("row_selector must return exactly n_reps indices.")
   }
 
-  ## 2. Discrepancy for observed data
-  ## Note - this function either calculate the discrepancy or
-  ## extract the right MCMC output
+  ## 2. Discrepancies + PPP for the observed world
   obs_disc <- disc_fun(MCMC_samples = MCMC_samples,
-                       data         = observed_data,
+                       new_data     = observed_data,
                        control      = control)
-
-  if (is.null(obs_disc$D)) {
-    stop("disc_fun must return a list with numeric vector 'D'.")
+  if (!all(c("obs", "sim") %in% names(obs_disc))) {
+    stop("disc_fun must return a list with components 'obs' and 'sim'.")
   }
-  D_obs <- as.numeric(obs_disc$D)
-  n_disc <- length(D_obs)
+  obs_obs <- as.numeric(obs_disc$obs)
+  obs_sim <- as.numeric(obs_disc$sim)
+  if (length(obs_obs) != length(obs_sim)) {
+    stop("'obs' and 'sim' must have the same length.")
+  }
 
-  ## Storage for replicated discrepancies
-  D_rep <- matrix(NA_real_, nrow = n_reps, ncol = n_disc)
+  # scalar PPP for the observed world
+  PPP_obs <- mean(obs_sim >= obs_obs)
 
-  ## 3. Calibration replications
+  ## 3. Calibration worlds: PPP in each replicated world
+  PPP_rep <- numeric(n_reps)
+
   for (r in seq_len(n_reps)) {
     theta_row <- MCMC_samples[row_indices[r], , drop = FALSE]
 
-    # 3a. Simulate replicated data from posterior predictive
+    # 3a. simulate a new dataset y^(r) from posterior predictive of the original model
     new_data <- new_data_fun(theta_row = theta_row,
                              observed_data = observed_data,
                              control = control)
 
-    # 3b. Fit model on replicated data (short chain)
+    # 3b. fit model on y^(r) (short chain)
     MCMC_rep <- MCMC_fun(new_data = new_data,
                          control  = control)
 
-    # 3c. Compute discrepancies for replicated dataset
+    # 3c. compute discrepancies + PPP in this world
     rep_disc <- disc_fun(MCMC_samples = MCMC_rep,
-                         data         = new_data,
+                         new_data     = new_data,
                          control      = control)
 
-    D_rep[r, ] <- as.numeric(rep_disc$D)
+    if (!all(c("obs", "sim") %in% names(rep_disc))) {
+      stop("disc_fun must return a list with components 'obs' and 'sim'.")
+    }
+    rep_obs <- as.numeric(rep_disc$obs)
+    rep_sim <- as.numeric(rep_disc$sim)
+    if (length(rep_obs) != length(rep_sim)) {
+      stop("'obs' and 'sim' must have the same length in each calibration world.")
+    }
+
+    PPP_rep[r] <- mean(rep_sim >= rep_obs)
   }
 
-  colnames(D_rep) <- names(D_obs)
+  ## 4. CPPP: how extreme PPP_obs is under the calibration distribution
+  CPPP <- mean(PPP_rep <= PPP_obs)
 
-  ## 4. Placeholder: PPP / CPPP calculation
-  # Example scalar PPP per discrepancy: P(D_rep >= D_obs)
-  PPP_obs <- vapply(
-    X   = seq_len(n_disc),
-    FUN = function(j) mean(D_rep[, j] >= D_obs[j]),
-    FUN.VALUE = numeric(1)
-  )
-
-  ## Example "calibrated" p-value placeholder: use PPP distribution vs PPP_obs
-  # This is intentionally minimal; replace with your exact CPPP definition.
-  CPPP <- vapply(
-    X   = seq_len(n_disc),
-    FUN = function(j) mean(PPP_obs[j] <= PPP_obs[j]),  # dummy; replace later
-    FUN.VALUE = numeric(1)
-  )
-
-  ## 5. Return structure – later you can wrap this into cpppResults S3
   list(
-    observed_discrepancy   = D_obs,
-    replicated_discrepancy = D_rep,
-    PPP_obs                = PPP_obs,
-    CPPP                   = CPPP,
-    row_indices            = row_indices
+    PPP_obs    = PPP_obs,
+    PPP_rep    = PPP_rep,
+    CPPP       = CPPP,
+    row_indices = row_indices
   )
 }
-
 
 
 

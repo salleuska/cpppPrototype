@@ -2,38 +2,44 @@
 % Please edit documentation in R/runCalibration.R
 \name{runCalibration}
 \alias{runCalibration}
-\title{Run calibration}
+\title{Run posterior predictive calibration}
 \usage{
 runCalibration(
   MCMC_samples,
+  observed_data,
   MCMC_fun,
   new_data_fun,
   disc_fun,
-  num_reps,
-  control = NULL,
+  n_reps,
+  row_selector = NULL,
+  control = list(),
   ...
 )
 }
 \arguments{
-\item{MCMC_samples}{A matrix or list containing posterior samples from the abserved-data (long) run. Passed to \code{new_data_fun()} as context.}
+\item{MCMC_samples}{Matrix/data.frame of posterior draws from the observed-data fit.}
 
-\item{MCMC_fun}{A function of the form \verb{function(new_data, control, ...)} that runs an MCMC algorithm and returns posterior samples.}
+\item{observed_data}{Observed dataset (any R object).}
 
-\item{new_data_fun}{A function of the form \verb{function(MCMC_samples, ...)} that generates a new synthetic dataset for each calibration replicate. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.}
+\item{MCMC_fun}{Function \verb{function(new_data, control)} that runs a short MCMC  on \code{new_data} and returns posterior samples.}
 
-\item{disc_fun}{A function of the form \verb{function(mcmc_samples, ...)}
-that computes and returns a scalar posterior predictive p-value (PPP) or discrepancy summary for that replicate.}
+\item{new_data_fun}{Function \verb{function(theta_row, observed_data, control)} that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.}
 
-\item{num_reps}{Integer. Number of calibration replicates to run.}
+\item{disc_fun}{Function \verb{function(MCMC_samples, data, control)} that returns  a list with at least a numeric vector \code{D} of discrepancy values, one per row
+of \code{MCMC_samples}.}
 
-\item{control}{Optional list of controls passed to \code{MCMC_fun}
-(e.g., \code{niter}, seeds, etc.).}
+\item{n_reps}{Number of calibration replications.}
 
-\item{...}{Additional arguments passed through to the user-supplied functions.}
+\item{row_selector}{Optional function \verb{function(MCMC_samples, n_reps, control)}
+returning the indices of rows to use as seeds for calibration.}
+
+\item{control}{List of additional backend-specific arguments.}
+
+\item{...}{Not used currently.}
+}
+\value{
+A list (later your cpppResults) with observed discrepancies and replicated discrepancies / PPP skeleton.
 }
 \description{
-This function runs the calibration to obtain the calibrated posterior predictive p-value.
-}
-\details{
-This function is fully engine-agnostic and contains no NIMBLE-specific code. It provides the scaffolding for the cppp calibration procedure.
+Run posterior predictive calibration
 }

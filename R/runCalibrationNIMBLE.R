@@ -1,81 +1,102 @@
+#' Run calibration using a NIMBLE model
+#'
+#' @param model Compiled nimbleModel with observed data set.
+#' @param dataNames Optional character vector of data node names. If NULL,
+#'   nodes flagged as data in the model are used.
+#' @param paramNames Character vector of parameter node names to monitor.
+#' @param disc_fun Function `function(data, theta_row, control)` returning a
+#'   scalar or vector discrepancy for one posterior draw.
+#' @param n_reps Number of calibration replications.
+#' @param MCMCcontrolMain List with `niter`, `nburnin`, `thin` for main chain.
+#' @param MCMCcontrolRep List with `niter`, `nburnin`, `thin` for calibration chains.
+#' @param mcmcConfFun Optional function `function(model)` returning an MCMC configuration.
+#' @param row_selector Optional row selector (see runCalibration()).
+#' @param control List of additional options passed to discrepancy / helpers.
+#' @param ... Not used currently.
 
 runCalibrationNIMBLE <- function(
     model,
     dataNames    = NULL,
     paramNames,
-    mcmcConfFun  = NULL,
-    MCMCcontrolMain = list(niter = 5000, thin = 1, nburnin = 1000),
-    MCMCcontrol     = list(niter = 500,  thin = 1, nburnin = 0),
-    nCalibrationReplicates = 100,
-    new_data_fun = NULL,
-    discrepancy  = NULL,
-    disc_control = list(),
+    disc_fun,                      # <- CHANGED: was `discrepancy`
+    n_reps       = 100,
+    MCMCcontrolMain = list(niter = 5000, nburnin = 1000, thin = 1),
+    MCMCcontrolRep  = list(niter = 500,  nburnin = 0,    thin = 1),
+    mcmcConfFun = NULL,
+    row_selector = NULL,
+    control = list(),
     ...
 ) {
-  ## 0. Default/validate dataNames, mcmcConfFun, nCalibrationReplicates, etc.
-  # (reuse your existing checks almost verbatim)
-
-
-  ## 1. Build Nimble MCMC config and compiled objects
-  mcmcConf <- if (is.null(mcmcConfFun)) {
-    configureMCMC(model, monitors = paramNames, print = FALSE)
-  } else {
-    mcmcConfFun(model)
+  ## 0. Data names and checks
+  if (is.null(dataNames)) {
+    dataNames <- model$getNodeNames(dataOnly = TRUE)
+  }
+  # ensure dataNames correspond to stochastic nodes
+  testDataNames <- all(model$expandNodeNames(dataNames) %in%
+                         model$getNodeNames(stochOnly = TRUE))
+  if (!testDataNames) {
+    stop("All dataNames must be stochastic nodes in the model.")
   }
 
-  # Optional: if you keep derived discrepancy machinery
-  # addDiscrepancies(mcmcConf, discrepancyFunctions, discrepancyFunctionsArgs)
-
+  ## 1. Configure and compile MCMC for main chain
+  if (is.null(mcmcConfFun)) {
+    mcmcConfFun <- function(model) {
+      configureMCMC(model, monitors = paramNames, print = FALSE)
+    }
+  }
+  mcmcConf       <- mcmcConfFun(model)
   mcmcUncompiled <- buildMCMC(mcmcConf)
   cmcmc          <- compileNimble(mcmcUncompiled, project = model, resetFunctions = TRUE)
-  cmodel         <- model  # if already compiled; otherwise, result of compileNimble(model)
+  cmodel         <- model   # assuming model is already compiled
 
-  ## 2. Run long chain on observed data
-  originalOutput <- runMCMC(cmcmc,
-                            niter   = MCMCcontrolMain$niter,
-                            nburnin = MCMCcontrolMain$nburnin,
-                            thin    = MCMCcontrolMain$thin)
-  MCMC_samples   <- originalOutput$samples
+  ## 2. Run main chain on observed data
+  main_out <- runMCMC(
+    cmcmc,
+    niter   = MCMCcontrolMain$niter,
+    nburnin = MCMCcontrolMain$nburnin,
+    thin    = MCMCcontrolMain$thin
+  )
+  MCMC_samples <- as.matrix(main_out)
 
-  ## 3. Build new_data_fun (if not supplied) using setAndSimNodes
-  if (is.null(new_data_fun)) {
-    simNodes <- unique(c(
-      model$expandNodeNames(dataNames),
-      model$getDependencies(paramNames, includeData = FALSE, self = FALSE)
-    ))
-    setAndSimPP   <- setAndSimNodes(model = model, nodes = paramNames, simNodes = simNodes)
-    cSetAndSimPP  <- compileNimble(setAndSimPP, project = model)
+  ## Extract observed data as plain R object
+  observed_data <- as.list(cmodel[dataNames])
 
-    new_data_fun <- make_nimble_new_data_fun(cSetAndSimPP, dataNames)
+  ## 3. Build new_data_fun using a Nimble simulator
+  # TODO: replace placeholder with setAndSimNodes-style nimbleFunction
+  new_data_fun <- function(theta_row, observed_data, control) {
+    # write theta_row into cmodel[paramNames] and simulate data nodes,
+    # then:
+    # simulated_data <- as.list(cmodel[dataNames])
+    # return(simulated_data)
+    observed_data  # placeholder
   }
 
-  ## 4. Build MCMC_fun
-  MCMC_fun <- make_MCMCfun(
-    calib_niter          = MCMCcontrol$niter,
-    simulated_data_nodes = dataNames,
-    cmodel               = cmodel,
-    cmcmc                = cmcmc,
-    MCMCcontrol          = MCMCcontrol
-  )
-
-  ## 5. Build disc_fun: either Nimble-derived via calculatePPP or offline
-  if (is.null(discrepancy)) {
-    # option A: Nimble-derived approach
-    disc_fun <- make_nimble_disc_fun(...)
-  } else {
-    # option B: offline discrepancy; build disc_fun around user discrepancy
-    disc_fun <- make_offline_disc_fun(discrepancy, disc_control)
+  ## 4. Build MCMC_fun for replicated datasets
+  MCMC_fun <- function(new_data, control) {
+    # assign new data into cmodel
+    for (nm in dataNames) {
+      cmodel[[nm]] <<- new_data[[nm]]
+    }
+    # run short chain
+    rep_out <- runMCMC(
+      cmcmc,
+      niter   = MCMCcontrolRep$niter,
+      nburnin = MCMCcontrolRep$nburnin,
+      thin    = MCMCcontrolRep$thin
+    )
+    as.matrix(rep_out)
   }
 
-  ## 7. Call the generic engine
-  results <- runCalibration(
-    MCMC_samples = MCMC_samples,
-    MCMC_fun     = MCMC_fun,
-    new_data_fun = new_data_fun,
-    disc_fun     = disc_fun,
-    control      = control,
-    num_reps    = nCalibrationReplicates,
-    ...
+  ## 5. Call generic engine (disc_fun is provided by the user)
+  runCalibration(
+    MCMC_samples  = MCMC_samples,
+    observed_data = observed_data,
+    MCMC_fun      = MCMC_fun,
+    new_data_fun  = new_data_fun,
+    disc_fun      = disc_fun,
+    n_reps        = n_reps,
+    row_selector  = row_selector,
+    control       = control
   )
-
 }
+

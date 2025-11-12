@@ -4,16 +4,19 @@
 \alias{make_col_disc_fun}
 \title{Discrepancy extractor (online)}
 \usage{
-make_col_disc_fun(col_obs = "disc_obs", col_rep = "disc_rep")
+make_col_disc_fun(
+  col_obs = "discrepancy_model",
+  col_sim = "discrepancy_simulated"
+)
 }
 \arguments{
 \item{col_obs}{Character. Column name for observed discrepancies.}
 
-\item{col_rep}{Character. Column name for replicated discrepancies.}
+\item{col_sim}{Character. Column name for replicated discrepancies.}
 }
 \value{
-A function \verb{function(new_samples, new_data, ...)} that returns
-\verb{list(obs = <numeric>, rep = <numeric>)} with equal lengths.
+A function \verb{function(MCMC_samples, new_data, ...)} that returns
+\verb{list(obs = <numeric>, sim = <numeric>)} with equal lengths.
 }
 \description{
 Returns a \code{disc_fun} that reads already-computed discrepancy columns

@@ -20,7 +20,7 @@ A function of the form \verb{function(MCMC_samples, new_data, ...)}
 that returns a list with two numeric vectors:
 \itemize{
 \item \code{obs}: discrepancies for the observed (replicate) data.
-\item \code{rep}: discrepancies for the replicated data.
+\item \code{sim}: discrepancies for the replicated data.
 }
 }
 \description{
