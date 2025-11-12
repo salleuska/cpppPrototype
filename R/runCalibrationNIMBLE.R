@@ -13,6 +13,7 @@
 #' @param row_selector Optional row selector (see runCalibration()).
 #' @param control List of additional options passed to discrepancy / helpers.
 #' @param ... Not used currently.
+#' @export
 
 runCalibrationNIMBLE <- function(
     model,

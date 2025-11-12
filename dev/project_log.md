@@ -1,36 +1,80 @@
 # cpppPrototype — Development Log  
 
----
 
-## **2025-11-12 — draft runCalibration + started tests**
+Encountered Nimble compilation issue
+  • Error:
+“Invalid project argument; models and nimbleFunctions must be compiled before being used to specify a project.”
+  • Logged for future debugging; not critical for today’s structural progress.
+  • We decided to postpone this debugging until the simulator architecture is locked in.
 
-### ✔ Implemented `runCalibration()`
-Built from your original version and corrected only structural issues while preserving your logic and comments.
+## 2025-11-12 — Calibration engine finalized + discrepancy unification
 
-Key fixes:
-- Moved return *outside* the loop.
-- `ppp <- list()` → `ppp <- numeric(num_reps)`.
-- Forwarded `...` to `new_data_fun()`, `MCMC_fun()`, and `disc_fun()`.
-- Added checks that `disc_fun()` returns a list with `$rep` and `$obs`.
-- Safe looping using `seq_len(num_reps)`.
+✔ Consolidated discrepancy interface (disc_fun)
+  • Unified offline and online discrepancies under a common interface:
+  • Every disc_fun() now returns:
+  • obs: discrepancies computed on the current dataset
+  • sim: discrepancies computed on posterior predictive replications
+  • Removed ambiguity between “discrepancy” and “disc_fun”.
+  • Adopted helpers:
+  • make_col_disc_fun() (online, uses columns already in MCMC samples)
+  • make_offline_disc_fun() (offline, computes discrepancies from user functions)
 
-Result:  
-A **engine-agnostic calibration loop**, ready to plug into Nimble or other engines.
+Result:
+A single, consistent contract for discrepancies across all engines (Nimble, Stan, JAGS, etc.).
 
----
+⸻
 
-### ✔ Added test suite for `runCalibration()`
-Using toy functions:
-- `new_data_fun()`
-- `MCMC_fun()`
-- `disc_fun()`
+✔ Updated runCalibrationNIMBLE() interface
+  • Replaced the discrepancy argument with a user-supplied disc_fun.
+  • Removed all internal discrepancy construction logic.
+  • Ensured that Nimble backend simply passes:
+  • MCMC_samples
+  • new_data_fun()
+  • disc_fun()
+  • to the generic runCalibration() engine.
 
-Tests assert:
-- Output vector is numeric
-- Length matches `num_reps`
-- All values in \([0,1]\)
-- All values finite
-- Proper errors for invalid inputs or malformed discrepancy objects
+This enforces the design philosophy:
+The backend handles sampling. The user controls the discrepancy.
+
+⸻
+
+✔ runCalibration() updated to use the unified discrepancy
+  • Now checks explicitly for obs and sim fields.
+  • Properly computes:
+  • PPP_obs = P(sim ≥ obs) for the observed world
+  • PPP_rep = PPP in each calibration world
+  • CPPP = P(PPP_rep ≤ PPP_obs)
+  • Added validation:
+  • vector lengths match
+  • structure of discrepancy return object
+  • row-selection logic is stable
+
+runCalibration() is now the correct, backend-neutral engine.
+
+⸻
+
+✔ Created Option B plan for Nimble posterior predictive simulator
+  • Designed a fully dependency-driven Nimble simulator (make_nimble_pp_simulator()).
+  • Identified its usage:
+  • as inner simulator for offline discrepancy (new_data_fun inside control)
+  • as outer simulator for calibration worlds
+  • Confirmed this structure matches the statistical definition of CPPP.
+
+Though not yet fully implemented inside the wrapper, we now have a clear, correct blueprint.
+
+⸻
+
+✔ Newcomb example: skeleton assembled
+  • Built a working pipeline for:
+  • Nimble model (Newcomb)
+  • Offline discrepancy (min observation)
+  • Inner posterior predictive simulation
+  • disc_fun built via make_offline_disc_fun()
+  • Ready to plug into runCalibrationNIMBLE()
+
+This example will serve as the first testbed once the Nimble simulator is finalized.
+
+⸻
 
 ---
 

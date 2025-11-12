@@ -17,6 +17,7 @@
 #' @param ... Not used currently.
 #'
 #' @return A list (later your cpppResults) with observed discrepancies and replicated discrepancies / PPP skeleton.
+#' @export
 
 runCalibration <- function(
     MCMC_samples,
