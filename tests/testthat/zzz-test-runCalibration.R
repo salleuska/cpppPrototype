@@ -6,6 +6,7 @@ test_that("runCalibration returns numeric PPP vector of correct length", {
 
   set.seed(1)
 
+  observed_data <- rnorm(20)
   # Fake "long-run" MCMC samples
   MCMC_samples <- matrix(0, nrow = 10, ncol = 1)
 
@@ -21,35 +22,37 @@ test_that("runCalibration returns numeric PPP vector of correct length", {
   }
 
   # Toy disc_fun: discrepancy is |mean(y)|; PPP via comparing |theta| to |mean(y)|
-  disc_fun <- function(mcmc_samples, ...) {
-    d_obs <- abs(mean(mcmc_samples[, "theta"]))
-    d_rep <- abs(mcmc_samples[, "theta"])  # pretend these are replicated discrepancies
+  disc_fun <- function(MCMC_samples, ...) {
+    d_obs <- abs(mean(MCMC_samples[, "theta"]))
+    d_rep <- abs(MCMC_samples[, "theta"])  # pretend these are replicated discrepancies
     list(
       rep = d_rep,
       obs = d_obs
     )
   }
 
-  num_reps <- 5
+  n_reps <- 5
 
   ppp <- runCalibration(
     MCMC_samples = MCMC_samples,
+    observed_data = observed_data,
     MCMC_fun     = MCMC_fun,
     new_data_fun = new_data_fun,
     disc_fun     = disc_fun,
-    num_reps     = num_reps
+    n_reps     = n_reps
   )
 
   expect_type(ppp, "double")
-  expect_length(ppp, num_reps)
+  expect_length(ppp, n_reps)
   expect_true(all(is.finite(ppp)))
   expect_true(all(ppp >= 0 & ppp <= 1))
 })
 
-test_that("runCalibration checks num_reps and disc_fun output", {
+test_that("runCalibration checks n_reps and disc_fun output", {
   skip_if_not("runCalibration" %in% ls("package:cpppPrototype"),
               "runCalibration() not exported yet")
 
+  observed_data <- rnorm(20)
   MCMC_samples <- matrix(0, nrow = 5, ncol = 1)
 
   new_data_fun <- function(MCMC_samples, ...) rnorm(10)
@@ -59,15 +62,24 @@ test_that("runCalibration checks num_reps and disc_fun output", {
     0.5  # numeric scalar, no $rep / $obs
   }
 
-  # num_reps must be positive integer
+  # n_reps must be positive integer
   expect_error(
-    runCalibration(MCMC_samples, MCMC_fun, new_data_fun, bad_disc_fun, num_reps = 0),
+    runCalibration(MCMC_samples,
+                   observed_data,
+                   MCMC_fun,
+                   new_data_fun,
+                   bad_disc_fun,
+                   n_reps = 0),
     "positive integer"
   )
 
   # disc_fun must return list with $rep and $obs
   expect_error(
-    runCalibration(MCMC_samples, MCMC_fun, new_data_fun, bad_disc_fun, num_reps = 1),
+    runCalibration(MCMC_samples,
+                   observed_data, MCMC_fun,
+                   new_data_fun,
+                   bad_disc_fun,
+                   n_reps = 1),
     "list with components `rep` and `obs`"
   )
 })
