@@ -5,22 +5,22 @@
 #' in `runCalibration()`, which computes the PPP.
 #'
 #' @param col_obs Character. Column name for observed discrepancies.
-#' @param col_rep Character. Column name for replicated discrepancies.
+#' @param col_sim Character. Column name for replicated discrepancies.
 #'
-#' @return A function `function(new_samples, new_data, ...)` that returns
-#'   `list(obs = <numeric>, rep = <numeric>)` with equal lengths.
+#' @return A function `function(MCMC_samples, new_data, ...)` that returns
+#'   `list(obs = <numeric>, sim = <numeric>)` with equal lengths.
 #'
 #' @export
-make_col_disc_fun <- function(col_obs = "disc_obs",
-                              col_rep = "disc_rep") {
+make_col_disc_fun <- function(col_obs = "discrepancy_model",
+                              col_sim = "discrepancy_simulated") {
   function(MCMC_samples, ...) {
     ## check that the discrepancy columns are in the samples
-    if (!all(c(col_obs, col_rep) %in% colnames(new_samples))) {
-      stop(sprintf("Columns '%s' and/or '%s' not found in new_samples.", col_obs, col_rep))
+    if (!all(c(col_obs, col_sim) %in% colnames(MCMC_samples))) {
+      stop(sprintf("Columns '%s' and/or '%s' not found in new_samples.", col_obs, col_sim))
     }
     list(
       obs = as.numeric(MCMC_samples[, col_obs]),
-      rep = as.numeric(MCMC_samples[, col_rep])
+      sim = as.numeric(MCMC_samples[, col_sim])
     )
   }
 }
@@ -48,7 +48,7 @@ make_col_disc_fun <- function(col_obs = "disc_obs",
 #'   that returns a list with two numeric vectors:
 #'   \itemize{
 #'     \item `obs`: discrepancies for the observed (replicate) data.
-#'     \item `rep`: discrepancies for the replicated data.
+#'     \item `sim`: discrepancies for the replicated data.
 #'   }
 #'
 #' @examples
@@ -71,10 +71,10 @@ make_offline_disc_fun <- function(control) {
     discrepancy  <- control$discrepancy
 
     d_obs <- apply(MCMC_samples, 1, function(th) discrepancy(new_data, th, ...))
-    d_rep <- apply(MCMC_samples, 1, function(th) {
-      y_rep <- new_data_fun(th, ...)
-      discrepancy(y_rep, th, ...)
+    d_sim <- apply(MCMC_samples, 1, function(th) {
+      y_sim <- new_data_fun(th, ...)
+      discrepancy(y_sim, th, ...)
     })
-    list(obs = as.numeric(d_obs), rep = as.numeric(d_rep))
+    list(obs = as.numeric(d_obs), sim = as.numeric(d_sim))
   }
 }
