@@ -1,13 +1,24 @@
 # R/Rfunctions.R
 
-#' Compute calibrated posterior predictive p-value (placeholder)
+#' Compute the calibrated posterior predictive p-value
 #'
-#' @param pppObs Numeric scalar in \eqn{[0,1]}; observed PPP.
-#' @param pppRep Numeric vector in \eqn{[0,1]}; calibration PPPs.
-#' @return Numeric scalar; calibrated PPP.
+#' @param pppObs Numeric scalar in \eqn{[0,1]}. The observed PPP.
+#' @param pppCal Numeric vector in \eqn{[0,1]}. PPPs from calibration datasets.
+#'
+#' @return Numeric scalar in \eqn{[0,1]}, the calibrated PPP.
 #' @export
-computeCppp <- function(pppObs, pppRep) {
-  stop("Not implemented", call. = FALSE)
+computeCppp <- function(pppObs, pppCal) {
+  # basic validation
+  if (!is.numeric(pppObs) || length(pppObs) != 1L)
+    stop("pppObs must be a numeric scalar.", call. = FALSE)
+  if (!is.numeric(pppCal))
+    stop("pppCal must be numeric.", call. = FALSE)
+
+  # handle empty vector as NA ??
+  if (length(pppCal) == 0L)
+    return(NA_real_)
+
+  mean(pppCal <= pppObs)
 }
 
 
