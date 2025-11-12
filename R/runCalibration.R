@@ -1,57 +1,120 @@
-###################################################
-#' Run calibration
+############################################################
+## Generic calibration engine (backend-agnostic)
+############################################################
+
+#' Run posterior predictive calibration
 #'
-#' This function runs the calibration to obtain the calibrated posterior predictive p-value.
+#' @param MCMC_samples Matrix/data.frame of posterior draws from the observed-data fit.
+#' @param observed_data Observed dataset (any R object).
+#' @param MCMC_fun Function `function(new_data, control)` that runs a short MCMC  on `new_data` and returns posterior samples.
+#' @param new_data_fun Function `function(theta_row, observed_data, control)` that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.
+#' @param disc_fun Function `function(MCMC_samples, data, control)` that returns  a list with at least a numeric vector `D` of discrepancy values, one per row
+#'   of `MCMC_samples`.
+#' @param n_reps Number of calibration replications.
+#' @param row_selector Optional function `function(MCMC_samples, n_reps, control)`
+#'   returning the indices of rows to use as seeds for calibration.
+#' @param control List of additional backend-specific arguments.
+#' @param ... Not used currently.
 #'
-#' @param MCMC_samples A matrix or list containing posterior samples from the abserved-data (long) run. Passed to `new_data_fun()` as context.
-#' @param MCMC_fun A function of the form `function(new_data, control, ...)` that runs an MCMC algorithm and returns posterior samples.
-#' @param new_data_fun A function of the form `function(MCMC_samples, ...)` that generates a new synthetic dataset for each calibration replicate. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.
-#' @param disc_fun A function of the form `function(mcmc_samples, ...)`
-#'   that computes and returns a list with components `rep` and `obs`,
-#'   the replicated and observed discrepancies for that replicate.
-#' @param num_reps Integer. Number of calibration replicates to run.
-#' @param control Optional list of controls passed to `MCMC_fun`
-#'   (e.g., `niter`, seeds, etc.).
-#' @param ... Additional arguments passed through to the user-supplied functions.
-#' @details
-#' This function is fully engine-agnostic and contains no NIMBLE-specific code. It provides the scaffolding for the cppp calibration procedure.
-#'
-#' @return Numeric vector of length `num_reps` containing the posterior predictive p-values for each calibration replicate.
-#' @export
-runCalibration <- function(MCMC_samples,
-                           MCMC_fun,
-                           new_data_fun,
-                           disc_fun,
-                           num_reps,
-                           control = NULL,
-                           ...) {
-  ## No nimble-specific concepts or code in this function.
-  ## Ignore where the "main" run happens
+#' @return A list (later your cpppResults) with observed discrepancies and replicated discrepancies / PPP skeleton.
+runCalibration <- function(
+    MCMC_samples,
+    observed_data,
+    MCMC_fun,
+    new_data_fun,
+    disc_fun,
+    n_reps,
+    row_selector = NULL,
+    control = list(),
+    ...
+) {
 
-  if (!is.numeric(num_reps) || length(num_reps) != 1L || num_reps < 1L) {
-    stop("`num_reps` must be a positive integer.", call. = FALSE)
-  }
-  num_reps <- as.integer(num_reps)
+  MCMC_samples <- as.matrix(MCMC_samples)
+  n_draws      <- nrow(MCMC_samples)
 
-  ## SP: here may be where we want the parallel option to work
-  ppp <- numeric(num_reps)
-
-  for (i in seq_len(num_reps)) {
-    new_data    <- new_data_fun(MCMC_samples, ...)
-    new_samples <- MCMC_fun(new_data, control, ...)
-    ## disc_fun() will return replicated discrepancies and observed one
-    discrepancies <- disc_fun(new_samples, ...)
-
-    if (!is.list(discrepancies) ||
-        is.null(discrepancies$rep) ||
-        is.null(discrepancies$obs)) {
-      stop("`disc_fun` must return a list with components `rep` and `obs`.",
-           call. = FALSE)
-    }
-
-    ppp[i] <- mean(discrepancies$rep >= discrepancies$obs, na.rm = TRUE)
+  ## Check that MCMC samples has at leaset one row
+  if (n_draws < 1L) {
+    stop("MCMC_samples must contain at least one row.")
   }
 
-  ## return vector of ppp
-  ppp
+  ## 1. Choose which posterior draws seed the calibration replications
+  if (is.null(row_selector)) {
+    # Default: evenly spaced draws across the chain
+    row_indices <- floor(seq(1, n_draws, length.out = n_reps))
+  } else {
+    row_indices <- row_selector(MCMC_samples, n_reps, control)
+  }
+
+  if (length(row_indices) != n_reps) {
+    stop("row_selector must return exactly n_reps indices.")
+  }
+
+  ## 2. Discrepancy for observed data
+  ## Note - this function either calculate the discrepancy or
+  ## extract the right MCMC output
+  obs_disc <- disc_fun(MCMC_samples = MCMC_samples,
+                       data         = observed_data,
+                       control      = control)
+
+  if (is.null(obs_disc$D)) {
+    stop("disc_fun must return a list with numeric vector 'D'.")
+  }
+  D_obs <- as.numeric(obs_disc$D)
+  n_disc <- length(D_obs)
+
+  ## Storage for replicated discrepancies
+  D_rep <- matrix(NA_real_, nrow = n_reps, ncol = n_disc)
+
+  ## 3. Calibration replications
+  for (r in seq_len(n_reps)) {
+    theta_row <- MCMC_samples[row_indices[r], , drop = FALSE]
+
+    # 3a. Simulate replicated data from posterior predictive
+    new_data <- new_data_fun(theta_row = theta_row,
+                             observed_data = observed_data,
+                             control = control)
+
+    # 3b. Fit model on replicated data (short chain)
+    MCMC_rep <- MCMC_fun(new_data = new_data,
+                         control  = control)
+
+    # 3c. Compute discrepancies for replicated dataset
+    rep_disc <- disc_fun(MCMC_samples = MCMC_rep,
+                         data         = new_data,
+                         control      = control)
+
+    D_rep[r, ] <- as.numeric(rep_disc$D)
+  }
+
+  colnames(D_rep) <- names(D_obs)
+
+  ## 4. Placeholder: PPP / CPPP calculation
+  # Example scalar PPP per discrepancy: P(D_rep >= D_obs)
+  PPP_obs <- vapply(
+    X   = seq_len(n_disc),
+    FUN = function(j) mean(D_rep[, j] >= D_obs[j]),
+    FUN.VALUE = numeric(1)
+  )
+
+  ## Example "calibrated" p-value placeholder: use PPP distribution vs PPP_obs
+  # This is intentionally minimal; replace with your exact CPPP definition.
+  CPPP <- vapply(
+    X   = seq_len(n_disc),
+    FUN = function(j) mean(PPP_obs[j] <= PPP_obs[j]),  # dummy; replace later
+    FUN.VALUE = numeric(1)
+  )
+
+  ## 5. Return structure – later you can wrap this into cpppResults S3
+  list(
+    observed_discrepancy   = D_obs,
+    replicated_discrepancy = D_rep,
+    PPP_obs                = PPP_obs,
+    CPPP                   = CPPP,
+    row_indices            = row_indices
+  )
 }
+
+
+
+
+
