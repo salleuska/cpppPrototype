@@ -2,18 +2,18 @@
 % Please edit documentation in R/Rfunctions.R
 \name{computeCppp}
 \alias{computeCppp}
-\title{Compute calibrated posterior predictive p-value (placeholder)}
+\title{Compute the calibrated posterior predictive p-value}
 \usage{
-computeCppp(pppObs, pppRep)
+computeCppp(pppObs, pppCal)
 }
 \arguments{
-\item{pppObs}{Numeric scalar in \eqn{[0,1]}; observed PPP.}
+\item{pppObs}{Numeric scalar in \eqn{[0,1]}. The observed PPP.}
 
-\item{pppRep}{Numeric vector in \eqn{[0,1]}; calibration PPPs.}
+\item{pppCal}{Numeric vector in \eqn{[0,1]}. PPPs from calibration datasets.}
 }
 \value{
-Numeric scalar; calibrated PPP.
+Numeric scalar in \eqn{[0,1]}, the calibrated PPP.
 }
 \description{
-Compute calibrated posterior predictive p-value (placeholder)
+Compute the calibrated posterior predictive p-value
 }
