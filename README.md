@@ -1,9 +1,9 @@
-# cpppPrototipe
+# cpppPrototype
 
 The **cppp** package implements the *Calibrated Posterior p-value* (cppp) procedure described in  
 *Computational Methods for Fast Bayesian Model Assessment via Calibrated Posterior p-values*.
 
-It provides a general framework—independent of any specific MCMC engine—to:
+It provides a general framework for a MCMC engine—to:
 
 1. Compute calibrated posterior p-values (cppp),
 2. Estimate their Monte Carlo variance using the idea of the **transfer effective sample size (ESS)**
@@ -43,34 +43,36 @@ Given data \(y\), a model \(p(\theta, y)\), and a discrepancy function \(D(y,\th
 
 ## Package architecture
 
-### Generic orchestration layer
+### Main functions 
 | Function | Purpose |
 |-----------|----------|
-| `runCalibration()` | Generic, backend-free driver for the calibration replicates. |
+| `runCalibration()` | Generic function for calibration |
 | `compute_cppp()` | Computes cppp from \(\hat p_{\text{obs}}\) and \(\hat p_j\). |
-| `transfer_ess_variance()` | Estimates cppp variance and SE via transfer ESS. |
+| `runCalibrationNIMBLE()` | NIMBLE-specific setup that builds the generic inputs and calls `runCalibration()`. |
 
-### Backend helpers
+### Helpers
 | Function | Role |
 |-----------|------|
-| `runCalibrationNIMBLE()` | NIMBLE-specific setup that builds the generic inputs and calls `runCalibration()`. |
-| `make_MCMCfun()` | Returns a closure that runs one short MCMC given new data. |
+| `transfer_ess_variance()` | Estimates cppp variance via transfer ESS. |
 | `make_col_disc_fun()` | Returns a function that extracts an “online” discrepancy column. |
 | `make_offline_disc_fun()` | Returns a function that computes discrepancies “offline.” |
+
+Possible? 
+
 | `make_data_sim_fun()` | Returns a function that simulates new datasets \(\tilde y\). |
+| `make_MCMCfun()` | Returns a closure that runs one short MCMC given new data. |
 
 ### Data object
 
-`cppp_result` (S3)
+`cpppResult` (S3) 
 
-  - `cppp_ecdf`
-  - `se`, `ci`
-  - per-replicate table with \(\hat p_j, q_j^*, \tau_j, \widetilde{\text{ESS}}_j, \widehat{\mathrm{Var}}(\hat p_j)\)
+  - cppp estimate, se, confidence interval
+  - informations about the calibration procedure? number of replicates and mcmc per replicated
   - methods: `print`, `summary`, `plot`
 
 ---
 
-## Typical workflow (conceptual steps)
+## Typical workflow 
 
 1. **Build your MCMC engine**
    - For NIMBLE: configure a model and compiled MCMC object.
@@ -90,9 +92,6 @@ Given data \(y\), a model \(p(\theta, y)\), and a discrepancy function \(D(y,\th
 5. **Compute cppp and variance**
    - `compute_cppp(p_hat_obs, p_hat_cal)`
    - `transfer_ess_variance(delta_chain, p_hat_obs, p_hat_cal, m_tilde, c=1.3)`
-
-6. **Inspect diagnostics**
-   - Check effective sample sizes, tie rates, sensitivity to inflation factor `c`.
 
 ---
 
@@ -121,9 +120,10 @@ For each j:
   1. Let \(q_j=\hat p_j\).
   2. Find threshold $q_j^{*}$ so empirical CDF of Δ at \(q_j^*\)= \(q_j\).
   3. Form indicator \(Z_i^{(j)}=\mathbf{1}\{\Delta_i\le q_j^*\}\).
-  4. Estimate IACT \(\tau_j\), 
+  4. Estimate integrated autocorrelation \(\tau_j\), 
   5. Transfer ESS \(\widetilde{\text{ESS}}_j=\tilde m_j/\tilde\tau_j\).
   6. $\widehat{\mathrm{Var}}(\hat{cppp})=$
+
 
 **E. Variance via two-piece decomposition (paper formulation)**
 
@@ -145,51 +145,6 @@ The cppp variance decomposes into two parts:
     \mathbf{1}\{K \le \tilde m\,\widehat{\mathrm{ppp}}(y)\}\mid Y)
 \Big].
 \]
-# 
-# - **Term A (within-replicate Monte Carlo noise)**  
-#   Variability due to the short MCMC runs.  
-#   For each replicate \(j\):
-#   1. Compute short-run variance \(v_j = q_j(1-q_j)/\widetilde{\mathrm{ESS}}_j\) via transfer ESS.  
-#   2. Approximate  
-#      \(\pi_j = \Phi\!\big((\hat p_{\text{obs}} - q_j)/\sqrt{v_j}\big)\).  
-#      This is \(\mathbb{E}_{K|Y}[\mathbf{1}\{K \le \tilde m\,\widehat{\mathrm{ppp}}(y)\}\mid Y_j]\).
-#   3. Estimate  
-#      \(\widehat{A} = \tfrac{1}{r^2}\sum_{j=1}^r \pi_j(1-\pi_j)\).
-# 
-# - **Term B (between-replicate / across-dataset variability)**  
-#   Sample variance of the conditional probabilities:  
-#   \(\widehat{B} = \operatorname{Var}_{\text{sample}}({ppp}_1,\dots,{ppp}_r)\).
-# 
-# - **Total variance and SE**
-#   \[
-#   \widehat{\operatorname{Var}}[\widehat{\text{cppp}}]
-#   = \widehat{A} + \widehat{B}, \qquad
-#   \widehat{\mathrm{SE}} = \sqrt{\widehat{A}+\widehat{B}}.
-#   \]
-
----
-
-## Implementation plan
-
-| Milestone | Description |
-|------------|--------------|
-| **M1 – Core data structures** | Define `cppp_result` and accessors (`print`, `summary`). |
-| **M2 – Long-run plumbing** | Accept user-supplied or internally generated Δ-chain and \(\hat p_{\text{obs}}\). |
-| **M3 – Orchestrator** | Implement `runCalibration()` control flow, argument checks, seed discipline. |
-| **M4 – Backends** | Implement `runCalibrationNIMBLE()` (build `MCMC_fun`, `disc_fun`, `new_data_fun`); leave stubs for others. |
-| **M5 – cppp & variance** | Implement `compute_cppp()` (ECDF + tie policy) and `transfer_ess_variance()` (IACT, inflation c, smoothed π j). |
-| **M6 – Diagnostics & plots** | Add `plot()` for ESS distribution and SE vs c. |
-| **M7 – Vignettes & examples** | Walkthroughs: NIMBLE with online/offline discrepancy; heterogeneous \(\tilde m_j\); extreme p-values. |
-
----
-
-## Design principles
-
-- **Backend-agnostic core**: `runCalibration()` never references NIMBLE directly.  
-- **Functional factories**: `make_*` helpers build closures that carry model-specific details.  
-- **Transparent diagnostics**: every variance or ESS number is traceable to its Δ-chain proxy.  
-- **Parallel-ready**: calibration replicates are independent—use your parallel framework of choice.  
-- **Reproducible**: explicit control of seeds and tie policies.
 
 ---
 
@@ -198,7 +153,7 @@ The cppp variance decomposes into two parts:
 
 ---
 
-## Example ideas (conceptual)
+## Example idea
 
 ```r
 # create a discrepancy extractor
