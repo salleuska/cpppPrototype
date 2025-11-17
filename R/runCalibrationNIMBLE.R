@@ -1,6 +1,6 @@
 #' Run calibration using a NIMBLE model
 #'
-#' @param model Compiled nimbleModel with observed data set.
+#' @param model either an uncompiled or compiled nimbleModel with observed data set.
 #' @param dataNames Optional character vector of data node names. If NULL,
 #'   nodes flagged as data in the model are used.
 #' @param paramNames Character vector of parameter node names to monitor.
@@ -39,6 +39,17 @@ runCalibrationNIMBLE <- function(
     stop("All dataNames must be stochastic nodes in the model.")
   }
 
+  ## check if the model is compiled model
+  if (inherits(model, "CmodelBaseClass")) {
+    ## Model is already compiled
+    cmodel <- model
+  } else if (inherits(model, "RmodelBaseClass")) {
+    ## Model is not compiled yet
+    cmodel <- compileNimble(model)
+  } else {
+    stop("Argument 'model' must be a nimbleModel or a compiled nimble model.")
+  }
+
   ## 1. Configure and compile MCMC for main chain
   if (is.null(mcmcConfFun)) {
     mcmcConfFun <- function(model) {
@@ -48,7 +59,6 @@ runCalibrationNIMBLE <- function(
   mcmcConf       <- mcmcConfFun(model)
   mcmcUncompiled <- buildMCMC(mcmcConf)
   cmcmc          <- compileNimble(mcmcUncompiled, project = model, resetFunctions = TRUE)
-  cmodel         <- model   # assuming model is already compiled
 
   ## 2. Run main chain on observed data
   main_out <- runMCMC(
@@ -60,17 +70,7 @@ runCalibrationNIMBLE <- function(
   MCMC_samples <- as.matrix(main_out)
 
   ## Extract observed data as plain R object
-  observed_data <- as.list(cmodel[dataNames])
-
-  ## 3. Build new_data_fun using a Nimble simulator
-  # TODO: replace placeholder with setAndSimNodes-style nimbleFunction
-  new_data_fun <- function(theta_row, observed_data, control) {
-    # write theta_row into cmodel[paramNames] and simulate data nodes,
-    # then:
-    # simulated_data <- as.list(cmodel[dataNames])
-    # return(simulated_data)
-    observed_data  # placeholder
-  }
+  observed_data <- as.list(cmodel[[dataNames]])
 
   ## 4. Build MCMC_fun for replicated datasets
   MCMC_fun <- function(new_data, control) {

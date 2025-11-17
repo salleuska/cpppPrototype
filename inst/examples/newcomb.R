@@ -2,23 +2,23 @@
 ## Newcomb data example: NIMBLE + offline discrepancy + CPPP
 ############################################################
 
-## 1) Packages ------------------------------------------------
+## 1) Packages
 library(nimble)
-library(cpppPrototype)   # or whatever your package is called
+library(cpppPrototype)
 
 
-## 2) Data: Newcomb light-speed measurements ------------------
+## 2) Data: Newcomb light-speed measurements
 ## Assuming light.txt is in the working directory
-newcomb_data <- list(
+newcombData <- list(
   y = read.table("inst/examples/light.txt")$V1
 )
-newcomb_constants <- list(
-  n = length(newcomb_data$y)
+constants <- list(
+  n = length(newcombData$y)
 )
 
 
-## 3) NIMBLE model -------------------------------------------
-newcomb_code <- nimbleCode({
+## 3) NIMBLE model
+newcombCode <- nimbleCode({
   for (i in 1:n) {
     y[i] ~ dnorm(mu, sd = sigma)
   }
@@ -26,54 +26,61 @@ newcomb_code <- nimbleCode({
   log(sigma) ~ dflat()
 })
 
-newcomb_inits <- list(mu = 0, log_sigma = 2)
+
+inits <- list(mu = 0, log_sigma = 2)
 
 newcomb_model <- nimbleModel(
-  code      = newcomb_code,
-  data      = newcomb_data,
-  inits     = newcomb_inits,
-  constants = newcomb_constants
+  code      = newcombCode,
+  data      = newcombData,
+  inits     = inits,
+  constants = constants
 )
 
 dataNames  <- "y"
 paramNames <- c("mu", "log_sigma")
 
-
-## 4) Offline discrepancy pieces ------------------------------
+## 4) Offline discrepancy
 ## Discrepancy: data-only, min(y)
 min_disc <- function(data, theta_row, control) {
   min(data$y)
 }
 
-## Inner posterior predictive simulator used by make_offline_disc_fun
-## This uses the *uncompiled* model to simulate y* given theta_row.
-newcomb_pp_sim_inner <- local({
-  model      <- newcomb_model
-  paramNames <- paramNames  # captured from outer scope
+## Uses newcomb_model and paramNames directly from the enclosing environment
+newcomb_newData <- function(theta_row, ...) {
+  theta_vec <- as.numeric(theta_row)
+  names(theta_vec) <- paramNames  # paramNames defined earlier
 
-  function(theta_row, ...) {
-    theta_vec <- as.numeric(theta_row)
-    names(theta_vec) <- paramNames
-
-    ## write parameters into the model
-    for (nm in paramNames) {
-      model[[nm]] <<- theta_vec[[nm]]
-    }
-
-    ## simulate downstream including data
-    model$simulate(nodes = "y", includeData = TRUE)
-
-    list(y = as.numeric(model[["y"]]))
+  ## write parameters into the model
+  for (nm in paramNames) {
+    newcomb_model[[nm]] <<- theta_vec[[nm]]
   }
-})
+
+  ## simulate downstream including data
+  newcomb_model$simulate(nodes = "y", includeData = TRUE)
+
+  list(y = as.numeric(newcomb_model[["y"]]))
+}
 
 ## Build disc_fun via the package helper
 disc_control <- list(
-  new_data_fun = newcomb_pp_sim_inner,
+  new_data_fun = newcomb_newData,
   discrepancy  = min_disc
 )
 disc_fun <- make_offline_disc_fun(disc_control)
 
+# #####
+# ## Test disc_fun
+# ## fake θ draws, just to test disc_fun mechanics
+# MCMC_samples_test <- matrix(
+#   c(0, 2,   # mu = 0, log_sigma = 2
+#     5, 1),  # mu = 5, log_sigma = 1
+#   ncol = 2,
+#   byrow = TRUE
+# )
+# colnames(MCMC_samples_test) <- paramNames  # c("mu", "log_sigma")
+# new_data_test <- list(y = newcombData$y)
+# disc_fun(MCMC_samples_test, new_data_test)
+##############
 
 ## 5) Run calibration via the package wrapper -----------------
 ## Note: this uses runCalibrationNIMBLE from your package, which internally
@@ -91,6 +98,7 @@ res_newcomb <- runCalibrationNIMBLE(
   MCMCcontrolMain = list(niter = 5000, nburnin = 1000, thin = 1),
   MCMCcontrolRep  = list(niter = 1000, nburnin = 200,  thin = 1)
 )
+
 
 print(res_newcomb$PPP_obs)
 print(res_newcomb$CPPP)

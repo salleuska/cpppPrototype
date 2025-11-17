@@ -5,14 +5,14 @@
 \title{Discrepancy extractor (online)}
 \usage{
 make_col_disc_fun(
-  col_obs = "discrepancy_model",
-  col_sim = "discrepancy_simulated"
+  colObs = "discrepancy_model",
+  colSim = "discrepancy_simulated"
 )
 }
 \arguments{
-\item{col_obs}{Character. Column name for observed discrepancies.}
+\item{colObs}{Character. Column name for observed discrepancies.}
 
-\item{col_sim}{Character. Column name for replicated discrepancies.}
+\item{colSim}{Character. Column name for replicated discrepancies.}
 }
 \value{
 A function \verb{function(MCMC_samples, new_data, ...)} that returns

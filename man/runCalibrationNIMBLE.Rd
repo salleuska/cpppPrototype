@@ -19,7 +19,7 @@ runCalibrationNIMBLE(
 )
 }
 \arguments{
-\item{model}{Compiled nimbleModel with observed data set.}
+\item{model}{either an uncompiled or compiled nimbleModel with observed data set.}
 
 \item{dataNames}{Optional character vector of data node names. If NULL,
 nodes flagged as data in the model are used.}

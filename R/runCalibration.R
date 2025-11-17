@@ -45,7 +45,7 @@ runCalibration <- function(
     stop("row_selector must return exactly n_reps indices.")
   }
 
-  ## 2. Discrepancies + PPP for the observed world
+  ## 2. Discrepancies + PPP for the observed data
   obs_disc <- disc_fun(MCMC_samples = MCMC_samples,
                        new_data     = observed_data,
                        control      = control)
@@ -58,7 +58,7 @@ runCalibration <- function(
     stop("'obs' and 'sim' must have the same length.")
   }
 
-  # scalar PPP for the observed world
+  # scalar PPP for the observed data
   PPP_obs <- mean(obs_sim >= obs_obs)
 
   ## 3. Calibration worlds: PPP in each replicated world
