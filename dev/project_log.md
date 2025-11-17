@@ -1,18 +1,23 @@
 # cpppPrototype — Development Log  
 
-### For next time
+# 2025-11-17 
+---
 
-Started Newcomb Example 
-- Model and data assembled.
-- Offline discrepancy defined using `min(y)`.
-- Ready to integrate with the outer simulator once finalized.
+### Where to start next time
+1. **Fix `new_data_fun` inside `runCalibrationNIMBLE()`:** I think there is some error in passing that 
 
-TODO 
- 
- - check weird chatgpt way to implement posterior predictive simulator implemented.
- - Encountered:  
-“Invalid project argument; models and nimbleFunctions must be compiled before being used to specify a project.”  
-Deferred until the posterior predictive simulator design is finalized.
+
+### Where things stand
+- `runCalibrationNIMBLE()` was modfied to:
+  - Accept both uncompiled (`RmodelBaseClass`) and compiled (`CmodelBaseClass`) NIMBLE models.
+  - Call the generic `runCalibration()` with `MCMC_fun`, `new_data_fun`, and `disc_fun`.
+
+- Newcomb example:
+  - Offline discrepancy `min_disc()` defined.
+  - `disc_fun` built via `make_offline_disc_fun()` using a simple simulator `newcomb_newData()`.
+
+- Current blocker:
+
 
 # 2025-11-12 
 
