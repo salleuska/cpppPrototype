@@ -16,7 +16,6 @@
   - Offline discrepancy `min_disc()` defined.
   - `disc_fun` built via `make_offline_disc_fun()` using a simple simulator `newcomb_newData()`.
 
-- Current blocker:
 
 
 # 2025-11-12 
@@ -45,7 +44,6 @@ Computes:
 \[
 \hat p_{cPPP} = \frac{1}{r} \sum I\{\text{pppCal}_j \le \text{pppObs}\}.
 \]
-
 Details:
 - Validates scalar and vector inputs
 - Handles empty calibration vectors gracefully

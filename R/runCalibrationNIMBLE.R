@@ -6,6 +6,7 @@
 #' @param paramNames Character vector of parameter node names to monitor.
 #' @param disc_fun Function `function(data, theta_row, control)` returning a
 #'   scalar or vector discrepancy for one posterior draw.
+#' @param new_data_fun Function `function(theta_row, observed_data, control)` that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.
 #' @param n_reps Number of calibration replications.
 #' @param MCMCcontrolMain List with `niter`, `nburnin`, `thin` for main chain.
 #' @param MCMCcontrolRep List with `niter`, `nburnin`, `thin` for calibration chains.
@@ -19,7 +20,8 @@ runCalibrationNIMBLE <- function(
     model,
     dataNames    = NULL,
     paramNames,
-    disc_fun,                      # <- CHANGED: was `discrepancy`
+    disc_fun,
+    new_data_fun,
     n_reps       = 100,
     MCMCcontrolMain = list(niter = 5000, nburnin = 1000, thin = 1),
     MCMCcontrolRep  = list(niter = 500,  nburnin = 0,    thin = 1),
@@ -69,7 +71,7 @@ runCalibrationNIMBLE <- function(
   )
   MCMC_samples <- as.matrix(main_out)
 
-  ## Extract observed data as plain R object
+  ## Extract observed data as an R object
   observed_data <- as.list(cmodel[[dataNames]])
 
   ## 4. Build MCMC_fun for replicated datasets
