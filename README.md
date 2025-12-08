@@ -16,11 +16,13 @@ It provides a general framework for a MCMC engine—to:
 Given data $y$, a model $p(\theta, y)$, and a discrepancy function $D(y,\theta)$:
 
 1. Run a long MCMC chain on $p(\theta\mid y)$ → get $M$ draws and compute
+
    $$
    \Delta_i = D(y_i^*, \theta_i) - D(y, \theta_i),
    \quad
    y_i^* \sim p(y^*\mid \theta_i).
    $$
+
    This $\Delta$-chain encodes the discrepancy structure of the model.
 
 2. Generate $r$ *calibration replicates*:
@@ -29,6 +31,7 @@ Given data $y$, a model $p(\theta, y)$, and a discrepancy function $D(y,\theta)$
    - compute short-run posterior-predictive p-values $\hat p_j$.
 
 3. Combine:
+
    $$
    \widehat{\text{cppp}}
    = \frac{1}{r}\sum_{j=1}^r
@@ -99,7 +102,7 @@ Possible?
 
 **A. Run long chain**
 1. Run long MCMC → $\Delta$  chain 
-2. $ \hat p_{\text{obs}} = M^{-1}\sum \mathbf{1}\{\Delta_i \le 0\} $
+2. $\hat p_{\text{obs}} = M^{-1}\sum \mathbf{1}\{\Delta_i \le 0\}$
 
 **B. Calibration (r short runs)**
 For each replicate j:  
