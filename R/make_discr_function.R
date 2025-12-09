@@ -63,7 +63,7 @@ make_col_disc_fun <- function(colObs = "discrepancy_model",
 #' @export
 make_offline_disc_fun <- function(control) {
   function(MCMC_samples, new_data, ...) {
-    ## Offline discrepancy calculator: compute D(data, θ) and D(y*, θ)
+    ## Offline discrepancy calculator: compute D(data, theta) and D(y*, theta)
     if (!is.list(control) || !all(c("new_data_fun", "discrepancy") %in% names(control))) {
       stop("control must be a list with elements 'new_data_fun' and 'discrepancy'.")
     }

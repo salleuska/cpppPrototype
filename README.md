@@ -1,6 +1,6 @@
 # cpppPrototype
 
-The **cppp** package implements the *Calibrated Posterior p-value* (cppp) procedure described in  
+This package implements the calibration premove.packages("cpppPrototype", lib = "/opt/homebrew/lib/R/4.5/site-library")rocedure described in  
 *Computational Methods for Fast Bayesian Model Assessment via Calibrated Posterior p-values*.
 
 It provides a general framework for a MCMC engine—to:

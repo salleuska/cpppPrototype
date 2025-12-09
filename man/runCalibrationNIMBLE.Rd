@@ -9,6 +9,7 @@ runCalibrationNIMBLE(
   dataNames = NULL,
   paramNames,
   disc_fun,
+  new_data_fun,
   n_reps = 100,
   MCMCcontrolMain = list(niter = 5000, nburnin = 1000, thin = 1),
   MCMCcontrolRep = list(niter = 500, nburnin = 0, thin = 1),
@@ -28,6 +29,8 @@ nodes flagged as data in the model are used.}
 
 \item{disc_fun}{Function \verb{function(data, theta_row, control)} returning a
 scalar or vector discrepancy for one posterior draw.}
+
+\item{new_data_fun}{Function \verb{function(theta_row, observed_data, control)} that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.}
 
 \item{n_reps}{Number of calibration replications.}
 

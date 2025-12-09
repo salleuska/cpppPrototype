@@ -42,7 +42,7 @@ paramNames <- c("mu", "log_sigma")
 ## 4) Offline discrepancy
 ## Discrepancy: data-only, min(y)
 min_disc <- function(data, theta_row, control) {
-  min(data$y)
+  min(data)
 }
 
 ## Uses newcomb_model and paramNames directly from the enclosing environment
@@ -56,9 +56,10 @@ newcomb_newData <- function(theta_row, ...) {
   }
 
   ## simulate downstream including data
-  newcomb_model$simulate(nodes = "y", includeData = TRUE)
+  newcomb_model$simulate(nodes = dataNames, includeData = TRUE)
 
-  list(y = as.numeric(newcomb_model[["y"]]))
+  newdata <- newcomb_model[[dataNames]]
+  newdata
 }
 
 ## Build disc_fun via the package helper
@@ -69,8 +70,8 @@ disc_control <- list(
 disc_fun <- make_offline_disc_fun(disc_control)
 
 # #####
-# ## Test disc_fun
-# ## fake θ draws, just to test disc_fun mechanics
+## Test disc_fun
+## fake params draws, just to test disc_fun mechanics
 # MCMC_samples_test <- matrix(
 #   c(0, 2,   # mu = 0, log_sigma = 2
 #     5, 1),  # mu = 5, log_sigma = 1
@@ -78,15 +79,9 @@ disc_fun <- make_offline_disc_fun(disc_control)
 #   byrow = TRUE
 # )
 # colnames(MCMC_samples_test) <- paramNames  # c("mu", "log_sigma")
-# new_data_test <- list(y = newcombData$y)
+# new_data_test <- newcombData$y
 # disc_fun(MCMC_samples_test, new_data_test)
 ##############
-
-## 5) Run calibration via the package wrapper -----------------
-## Note: this uses runCalibrationNIMBLE from your package, which internally
-## handles the main chain and short chains. The outer new_data_fun used for
-## calibration worlds is whatever implementation you currently have in the
-## package (you can later upgrade it to use a posterior predictive simulator).
 
 set.seed(1)
 res_newcomb <- runCalibrationNIMBLE(
@@ -94,11 +89,40 @@ res_newcomb <- runCalibrationNIMBLE(
   dataNames  = dataNames,
   paramNames = paramNames,
   disc_fun   = disc_fun,
-  n_reps     = 50,  # smallish number for quick runs
+  new_data_fun = newcomb_newData,
+  n_reps       = 50,  # smallish number for quick runs
   MCMCcontrolMain = list(niter = 5000, nburnin = 1000, thin = 1),
-  MCMCcontrolRep  = list(niter = 1000, nburnin = 200,  thin = 1)
+  MCMCcontrolRep  = list(niter = 500, nburnin = 0,  thin = 1)
 )
 
 
-print(res_newcomb$PPP_obs)
-print(res_newcomb$CPPP)
+print(res_newcomb$cppp)
+print(res_newcomb$ppp)
+
+obsDisc <- res_newcomb$discrepancies$obs
+str(obsDisc)
+
+############################
+## TMP for checks
+# model      = newcomb_model
+# dataNames  = dataNames
+# paramNames = paramNames
+# disc_fun   = disc_fun
+# new_data_fun = newcomb_newData
+# n_reps       = 10
+# MCMCcontrolMain = list(niter = 5000, nburnin = 1000, thin = 1)
+# MCMCcontrolRep  = list(niter = 500, nburnin = 0,  thin = 1)
+# mcmcConfFun = NULL
+# row_selector = NULL
+# control = list()
+#
+#
+# MCMC_samples  = MCMC_samples
+# observed_data = observed_data
+# MCMC_fun      = MCMC_fun
+# new_data_fun  = new_data_fun
+# disc_fun      = disc_fun
+# n_reps        = n_reps
+# row_selector  = row_selector
+# control       = control
+#######

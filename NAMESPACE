@@ -3,7 +3,7 @@
 export(computeCppp)
 export(make_col_disc_fun)
 export(make_offline_disc_fun)
-export(new_cppresults)
+export(new_cpppResults)
 export(runCalibration)
 export(runCalibrationNIMBLE)
 export(transferAutocorrelation)
