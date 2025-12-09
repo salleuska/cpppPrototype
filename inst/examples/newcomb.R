@@ -41,9 +41,19 @@ paramNames <- c("mu", "log_sigma")
 
 ## 4) Offline discrepancy
 ## Discrepancy: data-only, min(y)
-min_disc <- function(data, theta_row, control) {
-  min(data)
+# min_disc <- function(data, theta_row, control) {
+#   min(data)
+# }
+
+## asymmetry discrepancy using R
+asymm_disc <- function(data, theta_row, control) {
+
+  mu <- theta_row[["mu"]]
+  dataSorted <- sort(data)
+
+  abs(dataSorted[6] - mu) - abs(dataSorted[61] - mu)
 }
+
 
 ## Uses newcomb_model and paramNames directly from the enclosing environment
 newcomb_newData <- function(theta_row, ...) {
@@ -63,13 +73,20 @@ newcomb_newData <- function(theta_row, ...) {
 }
 
 ## Build disc_fun via the package helper
+# disc_control <- list(
+#   new_data_fun = newcomb_newData,
+#   discrepancy  = min_disc
+# )
+
 disc_control <- list(
   new_data_fun = newcomb_newData,
-  discrepancy  = min_disc
+  discrepancy  = asymm_disc
 )
+
 disc_fun <- make_offline_disc_fun(disc_control)
 
-# #####
+
+######
 ## Test disc_fun
 ## fake params draws, just to test disc_fun mechanics
 # MCMC_samples_test <- matrix(
