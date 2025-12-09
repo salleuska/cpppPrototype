@@ -13,10 +13,9 @@
 #' @param ... Additional elements to store in the object.
 #' SP E.g., do we want to save in this object functions used in the pipeline?
 #'
-#' @return An object of class `cpppResult`.
+#' @return An object of class `cpppResults`.
 #' @export
-
-new_cppresults <- function(cppp = NA_real_,
+new_cpppResults <- function(cppp = NA_real_,
                            ppp = numeric(),
                            obs_ppp = numeric(),
                            discrepancies = NULL,
