@@ -35,7 +35,7 @@ runCalibration <- function(
 
   if (n_draws < 1L) stop("MCMC_samples must contain at least one row.")
 
-  ## 1. Choose rows to seed calibration worlds
+  ##  Choose rows in MCMC_samples to simulate data for calibration
   if (is.null(row_selector)) {
     row_indices <- floor(seq(1, n_draws, length.out = n_reps))
   } else {
@@ -61,8 +61,9 @@ runCalibration <- function(
   # scalar PPP for the observed data
   PPP_obs <- mean(obs_sim >= obs_obs)
 
-  ## 3. Calibration worlds: PPP in each replicated world
+  ## 3. Calibration worlds: PPP for each replicates
   PPP_rep <- numeric(n_reps)
+  rep_disc_list <- vector("list", n_reps)
 
   for (r in seq_len(n_reps)) {
     theta_row <- MCMC_samples[row_indices[r], , drop = FALSE]
@@ -90,17 +91,35 @@ runCalibration <- function(
       stop("'obs' and 'sim' must have the same length in each calibration world.")
     }
 
-    PPP_rep[r] <- mean(rep_sim >= rep_obs)
+    PPP_rep[r]         <- mean(rep_sim >= rep_obs)
+    rep_disc_list[[r]] <- rep_disc
+
   }
 
   ## 4. CPPP: how extreme PPP_obs is under the calibration distribution
   CPPP <- mean(PPP_rep <= PPP_obs)
 
-  list(
-    PPP_obs    = PPP_obs,
-    PPP_rep    = PPP_rep,
-    CPPP       = CPPP,
-    row_indices = row_indices
+  ## 5. Collect all discrepancies
+  discrepancies <- list(
+    obs = list(
+      obs = obs_obs,
+      sim = obs_sim
+    ),
+    rep = lapply(rep_disc_list, function(d) {
+      list(
+        obs = as.numeric(d$obs),
+        sim = as.numeric(d$sim)
+      )
+    })
+  )
+
+  ## 6. Return cpppResult object
+  new_cpppResults(
+    cppp         = CPPP,
+    ppp          = PPP_rep,
+    obs_ppp      = PPP_obs,
+    discrepancies = discrepancies,
+    row_indices   = row_indices
   )
 }
 

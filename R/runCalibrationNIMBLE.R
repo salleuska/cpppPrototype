@@ -34,8 +34,10 @@ runCalibrationNIMBLE <- function(
   if (is.null(dataNames)) {
     dataNames <- model$getNodeNames(dataOnly = TRUE)
   }
+  ## expand to nodes
+  dataNodes <- model$expandNodeNames(dataNames)
   # ensure dataNames correspond to stochastic nodes
-  testDataNames <- all(model$expandNodeNames(dataNames) %in%
+  testDataNames <- all(dataNodes %in%
                          model$getNodeNames(stochOnly = TRUE))
   if (!testDataNames) {
     stop("All dataNames must be stochastic nodes in the model.")
@@ -71,15 +73,17 @@ runCalibrationNIMBLE <- function(
   )
   MCMC_samples <- as.matrix(main_out)
 
-  ## Extract observed data as an R object
-  observed_data <- as.list(cmodel[[dataNames]])
+  ## Extract observed data from the model
+  ## SP: need to think better if data is a vector/matrix/array - something else?
+  observed_data <- cmodel[[dataNames]]
+
 
   ## 4. Build MCMC_fun for replicated datasets
-  MCMC_fun <- function(new_data, control) {
+  ## SP: do we want a make_MCMCfun?
+  MCMC_fun <- function(new_data,
+                       control) {
     # assign new data into cmodel
-    for (nm in dataNames) {
-      cmodel[[nm]] <<- new_data[[nm]]
-    }
+    cmodel[[dataNames]] <- new_data
     # run short chain
     rep_out <- runMCMC(
       cmcmc,
@@ -90,7 +94,7 @@ runCalibrationNIMBLE <- function(
     as.matrix(rep_out)
   }
 
-  ## 5. Call generic engine (disc_fun is provided by the user)
+  ## 5. Call generic engine
   runCalibration(
     MCMC_samples  = MCMC_samples,
     observed_data = observed_data,
@@ -101,5 +105,6 @@ runCalibrationNIMBLE <- function(
     row_selector  = row_selector,
     control       = control
   )
+
 }
 
