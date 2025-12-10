@@ -7,21 +7,21 @@ It provides a general framework for a MCMC engine—to:
 
 1. Compute calibrated posterior p-values (cppp),
 2. Estimate their Monte Carlo variance using the idea of the **transfer effective sample size (ESS)**
-3. Can handle different MCMC engines. **NIMBLE** and R for no, other MCMC engines later.
+3. Can handle different MCMC engines. **NIMBLE** and R for now, other MCMC engines later.
 
 ---
 
 ## Concept
 
-Given data $y$, a model $p(\theta, y)$, and a discrepancy function $D(y,\theta)$:
+Given data $y$, a model $p(\theta \mid y) \propto p(y \mid \theta) \pi (\theta) $, and a discrepancy function $D(y,\theta)$:
 
-1. Run a long MCMC chain on $p(\theta\mid y)$ → get $M$ draws and compute
+1. Run an long MCMC chain to obtain draws from the posterior $p(\theta\mid y)$. We get $M$ draws and compute
 
-   $$
-   \Delta_i = D(y_i^*, \theta_i) - D(y, \theta_i),
-   \quad
-   y_i^* \sim p(y^*\mid \theta_i).
-   $$
+$$
+ \Delta_i = D(y_i^*, \theta_i) - D(y, \theta_i),
+ \quad
+ y_i^* \sim p(y^*\mid \theta_i).
+$$
 
    This $\Delta$-chain encodes the discrepancy structure of the model.
 
@@ -101,7 +101,7 @@ Possible?
 ## Algorithm 
 
 **A. Run long chain**
-1. Run long MCMC → $\Delta$  chain 
+1. Run long MCMC -> $\Delta$  chain 
 2. $\hat p_{\text{obs}} = M^{-1}\sum \mathbf{1}\{\Delta_i \le 0\}$
 
 **B. Calibration (r short runs)**
@@ -112,6 +112,7 @@ For each replicate j:
   - Compute $\hat p_j = \tilde m_j^{-1}\sum \mathbf{1}\{\tilde\Delta_{j,t}\le0\}$
 
 **C. Estimate cppp**
+
 $$
 \widehat{\text{cppp}} = r^{-1}\sum_{j=1}^r
   \mathbf{1}\{\hat p_j \le \hat p_{\text{obs}}\}.
@@ -125,7 +126,7 @@ For each j:
   3. Form indicator $Z_i^{(j)}=\mathbf{1}\{\Delta_i\le q_j^*\}$.
   4. Estimate integrated autocorrelation $\tau_j$, 
   5. Transfer ESS $\widetilde{\text{ESS}}_j=\tilde m_j/\tilde\tau_j$.
-  6. $\widehat{\mathrm{Var}}(\hat{cppp})=$
+  6. $\widehat{\mathrm{Var}}(\hat{cppp})$
 
 
 **E. Variance via two-piece decomposition (paper formulation)**
