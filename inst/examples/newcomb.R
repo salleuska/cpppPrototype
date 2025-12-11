@@ -48,14 +48,15 @@ paramNames <- c("mu", "log_sigma")
 ## asymmetry discrepancy using R
 asymm_disc <- function(data, theta_row, control) {
 
-  mu <- theta_row[["mu"]]
+  mu <- theta_row["mu"]
   dataSorted <- sort(data)
 
-  abs(dataSorted[6] - mu) - abs(dataSorted[61] - mu)
+  abs(dataSorted[61] - mu) - abs(dataSorted[6] - mu)
 }
 
 
-## Uses newcomb_model and paramNames directly from the enclosing environment
+## function that generates new data
+
 newcomb_newData <- function(theta_row, ...) {
   theta_vec <- as.numeric(theta_row)
   names(theta_vec) <- paramNames  # paramNames defined earlier
@@ -107,8 +108,8 @@ res_newcomb <- runCalibrationNIMBLE(
   paramNames = paramNames,
   disc_fun   = disc_fun,
   new_data_fun = newcomb_newData,
-  n_reps       = 50,  # smallish number for quick runs
-  MCMCcontrolMain = list(niter = 5000, nburnin = 1000, thin = 1),
+  n_reps       = 100,  # smallish number for quick runs
+  MCMCcontrolMain = list(niter = 10000, nburnin = 5000, thin = 1),
   MCMCcontrolRep  = list(niter = 500, nburnin = 0,  thin = 1)
 )
 
@@ -116,30 +117,8 @@ res_newcomb <- runCalibrationNIMBLE(
 print(res_newcomb$cppp)
 print(res_newcomb$ppp)
 
-obsDisc <- res_newcomb$discrepancies$obs
-str(obsDisc)
-
+# obsDisc <- res_newcomb$discrepancies$obs
+# plot(obsDisc$obs, obsDisc$sim)
+# abline()
 ############################
-## TMP for checks
-# model      = newcomb_model
-# dataNames  = dataNames
-# paramNames = paramNames
-# disc_fun   = disc_fun
-# new_data_fun = newcomb_newData
-# n_reps       = 10
-# MCMCcontrolMain = list(niter = 5000, nburnin = 1000, thin = 1)
-# MCMCcontrolRep  = list(niter = 500, nburnin = 0,  thin = 1)
-# mcmcConfFun = NULL
-# row_selector = NULL
-# control = list()
-#
-#
-# MCMC_samples  = MCMC_samples
-# observed_data = observed_data
-# MCMC_fun      = MCMC_fun
-# new_data_fun  = new_data_fun
-# disc_fun      = disc_fun
-# n_reps        = n_reps
-# row_selector  = row_selector
-# control       = control
-#######
+

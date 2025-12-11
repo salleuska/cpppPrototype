@@ -4,7 +4,7 @@
 
 #' Run posterior predictive calibration
 #'
-#' @param MCMC_samples Matrix/data.frame of posterior draws from the observed-data fit.
+#' @param MCMC_samples Matrix of posterior draws from the observed-data fit.
 #' @param observed_data Observed dataset (any R object).
 #' @param MCMC_fun Function `function(new_data, control)` that runs a short MCMC  on `new_data` and returns posterior samples.
 #' @param new_data_fun Function `function(theta_row, observed_data, control)` that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.
@@ -16,7 +16,7 @@
 #' @param control List of additional backend-specific arguments.
 #' @param ... Not used currently.
 #'
-#' @return A list (later your cpppResults) with observed discrepancies and replicated discrepancies / PPP skeleton.
+#' @return a list (future `S3` class `cpppResults` objects) containing the cppp, observed and replicated ppp, observed discrepancies and replicated discrepancies.
 #' @export
 
 runCalibration <- function(
