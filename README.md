@@ -13,33 +13,31 @@ It provides a general framework for a MCMC engine—to:
 
 ## Concept
 
-Given data $y$, a model $p(\theta \mid y) \propto p(y \mid \theta) \pi (\theta) $, and a discrepancy function $D(y,\theta)$:
+Given data $y$, a model $p(\theta \mid y) \propto p(y \mid \theta) \pi (\theta)$, and a discrepancy function $D(y,\theta)$:
 
-1. Run an long MCMC chain to obtain draws from the posterior $p(\theta\mid y)$. We get $M$ draws and compute
+1. Run an long MCMC chain to obtain draws from the posterior $p(\theta \mid y)$. With $M$ draws, we sample new datafrom the posterior predictive of the data $p(y^* \mid \theta_i)$ and compute 
 
 $$
- \Delta_i = D(y_i^*, \theta_i) - D(y, \theta_i),
- \quad
- y_i^* \sim p(y^*\mid \theta_i).
+ \Delta_i = D(y^*_i, \theta_i) - D(y, \theta_i),
 $$
 
-   This $\Delta$-chain encodes the discrepancy structure of the model.
+This chain of $\Delta = \{ \Delta_i \}$ collects the observed discrepancies.
 
 2. Generate $r$ *calibration replicates*:
-   - simulate new datasets $\tilde y_j$ from the model,
-   - run short chains of length $\tilde m$ for $p(\theta\mid \tilde y_j)$,
-   - compute short-run posterior-predictive p-values $\hat p_j$.
+   - simulate new datasets $\tilde{y}_j$ from the model,
+   - run short chains of length $\tilde{m} $ for $p(\theta \mid \tilde{y}_j)$,
+   - compute short-run posterior-predictive p-values $\hat{p}_j$.
 
 3. Combine:
 
    $$
    \widehat{\text{cppp}}
    = \frac{1}{r}\sum_{j=1}^r
-     \mathbf{1}\{\hat p_j \le \hat p_{\text{obs}}\}.
+     \mathbf{1}\{\hat{p}_j \le \hat{p}_{\text{obs}}\}.
    $$
 
 4. Estimate the Monte Carlo variance using the *transfer ESS* idea:
-   match each $\hat p_j$ to a quantile on the observed Δ-chain,
+   match each $\hat{p}_j$ to a quantile on the observed  $\Delta$ -chain,
    compute the transfer autocorrelation, and estimate the cppp variance.
   
 ---
@@ -50,26 +48,30 @@ $$
 | Function | Purpose |
 |-----------|----------|
 | `runCalibration()` | Generic function for calibration |
-| `compute_cppp()` | Computes cppp from $\hat p_{\text{obs}}$ and $\hat p_j$. |
 | `runCalibrationNIMBLE()` | NIMBLE-specific setup that builds the generic inputs and calls `runCalibration()`. |
 
 ### Helpers
 | Function | Role |
 |-----------|------|
-| `transfer_ess_variance()` | Estimates cppp variance via transfer ESS. |
 | `make_col_disc_fun()` | Returns a function that extracts an “online” discrepancy column. |
 | `make_offline_disc_fun()` | Returns a function that computes discrepancies “offline.” |
+| `compute_cppp()` | Computes cppp from $\hat p_{\text{obs}}$ and $\hat p_j$. |
+| `transfer_ess_variance()` | Estimates cppp variance via transfer ESS. |
 
-Possible? 
+Other possible helpers? 
 
+| Function | Role |
+|-----------|------|
 | `make_data_sim_fun()` | Returns a function that simulates new datasets $\tilde y$. |
-| `make_MCMCfun()` | Returns a closure that runs one short MCMC given new data. |
+| `make_MCMCfun()` | [need to check what that was] |
 
 ### Data object
 
 `cpppResult` (S3) 
 
   - cppp estimate, se, confidence interval
+  - observed ppp, replicated ppp
+  - observed discrrepancies, replicated discrepancies (optional?)
   - informations about the calibration procedure? number of replicates and mcmc per replicated
   - methods: `print`, `summary`, `plot`
 
@@ -82,7 +84,7 @@ Possible?
    - Otherwise: supply a function `MCMC_fun(new_data, control)` that runs an MCMC and returns samples.
 
 2. **Provide a data simulator**
-   - `new_data_fun()` draws a synthetic dataset $\tilde y$ from your model.
+   - `new_data_fun()` draws a dataset $\tilde{y}$ from the model posterior predictive.
 
 3. **Provide a discrepancy handler**
    - *Online*: the discrepancy or PPP is computed during MCMC; just extract the column.
@@ -90,22 +92,22 @@ Possible?
 
 4. **Run calibration**
    - Call `runCalibration()` with your functions and number of replicates $r$.
-   - It loops: simulate → run short chain → compute $\hat p_j$.
+   - the function iteratively: simulate → run short chain → compute $\hat{p}_j$.
 
 5. **Compute cppp and variance**
    - `compute_cppp(p_hat_obs, p_hat_cal)`
-   - `transfer_ess_variance(delta_chain, p_hat_obs, p_hat_cal, m_tilde, c=1.3)`
+   - `transfer_ess_variance(delta_chain, p_hat_obs, p_hat_cal, m_tilde)`
 
 ---
 
-## Algorithm 
-
+<!--
+Algorithm
 **A. Run long chain**
-1. Run long MCMC -> $\Delta$  chain 
+1. Run long MCMC -> $\Delta$  chain
 2. $\hat p_{\text{obs}} = M^{-1}\sum \mathbf{1}\{\Delta_i \le 0\}$
 
 **B. Calibration (r short runs)**
-For each replicate j:  
+For each replicate j:
 
   - Simulate $\tilde y_j$
   - Run short MCMC ($\tilde m_j$ iterations)
@@ -119,12 +121,12 @@ $$
 $$
 
 **D. Variance via transfer ESS**
-For each j:  
+For each j:
 
   1. Let $q_j=\hat p_j$.
   2. Find threshold $q_j^{*}$ so empirical CDF of Δ at $q_j^*$= $q_j$.
   3. Form indicator $Z_i^{(j)}=\mathbf{1}\{\Delta_i\le q_j^*\}$.
-  4. Estimate integrated autocorrelation $\tau_j$, 
+  4. Estimate integrated autocorrelation $\tau_j$,
   5. Transfer ESS $\widetilde{\text{ESS}}_j=\tilde m_j/\tilde\tau_j$.
   6. $\widehat{\mathrm{Var}}(\hat{cppp})$
 
@@ -149,28 +151,27 @@ $$
     \mathbf{1}\{K \le \tilde m\,\widehat{\mathrm{ppp}}(y)\}\mid Y)
 \Big].
 $$
-
----
+-->
 
 ##   Future extensions
 - Support for other MCMC frameworks (`runCalibration_other()`).
 
 ---
 
-## Example idea
+## Example
 
 ```r
+# define simulator for new datasets
+new_data_fun <- make_data_sim_fun(...)
+
 # create a discrepancy extractor
 disc_fun <- make_col_disc_fun("ppp_column")
 
-# or an offline calculator
-disc_fun <- make_offline_disc_fun(control = list(n_pred = 100))
+# or an offline discrepancy
+disc_fun <- make_offline_disc_fun(control = list(
+  new_data_fun = new_data_fun,
+  discrepancy  = discrepancy))
 
-# define short-chain runner
-MCMC_fun <- make_MCMCfun(niter = 200, data_nodes, cmodel, cmcmc)
-
-# define simulator for new datasets
-new_data_fun <- make_data_sim_fun(...)
 
 # orchestrate calibration
 res <- runCalibration(MCMC_samples_obs, MCMC_fun, new_data_fun, disc_fun,
