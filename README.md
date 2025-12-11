@@ -30,11 +30,11 @@ This chain of $\Delta = \{ \Delta_i \}$ collects the observed discrepancies.
 
 3. Combine:
 
-   $$
-   \widehat{\text{cppp}}
-   = \frac{1}{r}\sum_{j=1}^r
-     \mathbf{1}\{\hat{p}_j \le \hat{p}_{\text{obs}}\}.
-   $$
+$$
+ \widehat{\text{cppp}}
+ = \frac{1}{r}\sum_{j=1}^r
+   \mathbf{1}\{\hat{p}_j \le \hat{p}_{\text{obs}}\}.
+$$
 
 4. Estimate the Monte Carlo variance using the *transfer ESS* idea:
    match each $\hat{p}_j$ to a quantile on the observed  $\Delta$ -chain,
