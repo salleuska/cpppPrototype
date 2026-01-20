@@ -6,7 +6,6 @@
 library(nimble)
 library(cpppPrototype)
 
-
 ## 2) Data: Newcomb light-speed measurements
 ## Assuming light.txt is in the working directory
 newcombData <- list(
@@ -41,9 +40,10 @@ paramNames <- c("mu", "log_sigma")
 
 ## 4) Offline discrepancy
 ## Discrepancy: data-only, min(y)
-# min_disc <- function(data, theta_row, control) {
-#   min(data)
-# }
+
+min_disc <- function(data, theta_row, control) {
+  min(data)
+}
 
 ## asymmetry discrepancy using R
 asymm_disc <- function(data, theta_row, control) {
@@ -57,9 +57,8 @@ asymm_disc <- function(data, theta_row, control) {
 
 ## function that generates new data
 
-newcomb_newData <- function(theta_row, ...) {
+newcomb_newData <- function(theta_row, paramNames, dataNames) {
   theta_vec <- as.numeric(theta_row)
-  names(theta_vec) <- paramNames  # paramNames defined earlier
 
   ## write parameters into the model
   for (nm in paramNames) {
@@ -87,19 +86,6 @@ disc_control <- list(
 disc_fun <- make_offline_disc_fun(disc_control)
 
 
-######
-## Test disc_fun
-## fake params draws, just to test disc_fun mechanics
-# MCMC_samples_test <- matrix(
-#   c(0, 2,   # mu = 0, log_sigma = 2
-#     5, 1),  # mu = 5, log_sigma = 1
-#   ncol = 2,
-#   byrow = TRUE
-# )
-# colnames(MCMC_samples_test) <- paramNames  # c("mu", "log_sigma")
-# new_data_test <- newcombData$y
-# disc_fun(MCMC_samples_test, new_data_test)
-##############
 
 set.seed(1)
 res_newcomb <- runCalibrationNIMBLE(
@@ -122,3 +108,39 @@ print(res_newcomb$ppp)
 # abline()
 ############################
 
+
+
+
+######
+samples <- nimbleMCMC(newcomb_model, niter = 5000, nburn = 1000)
+newcomb_model$y <- newcombData$y
+
+# # Test disc_fun
+# new_data_test <- newcombData$y
+# res <- disc_fun(samples, new_data_test)
+# str(res)
+
+## 2. Discrepancies + PPP for the observed data
+obs_disc <- disc_fun(MCMC_samples = samples,
+                     new_data     = newcomb_model$y)
+plot(obsDisc$obs, obsDisc$sim)
+mean(obsDisc$sim > obsDisc$obs)
+abline()
+####
+## line by line check
+dObs <- apply(samples, 1, function(th) asymm_disc(newcomb_model$y, th))
+hist(dObs)
+sim_data <- list()
+disc_rep <- list()
+for(i in seq_along(NROW(samples))) {
+  sim_data[[i]]  <- newcomb_newData(samples[i, ], paramNames, dataNames)
+  disc_rep[[i]] <-   asymm_disc(samples[i, ], i)
+}
+# dSim <- apply(samples, 1, function(th) {
+#   y <- newcomb_newData(th)
+#   asymm_disc(y, th)
+# })
+hist(dSim)
+plot(dObs, dSim)
+abline()
+##############

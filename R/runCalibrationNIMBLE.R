@@ -3,7 +3,7 @@
 #' @param model either an uncompiled or compiled nimbleModel with observed data set.
 #' @param dataNames Optional character vector of data node names. If NULL,
 #'   nodes flagged as data in the model are used.
-#' @param paramNames Character vector of parameter node names to monitor.
+#' @param paramNames Character vector of parameter node names to monitor. (SP: if NULL some default?)
 #' @param disc_fun Function `function(data, theta_row, control)` returning a
 #'   scalar or vector discrepancy for one posterior draw.
 #' @param new_data_fun Function `function(theta_row, observed_data, control)` that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.

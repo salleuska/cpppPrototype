@@ -75,6 +75,6 @@ make_offline_disc_fun <- function(control) {
       y <- new_data_fun(th, ...)
       discrepancy(y, th, ...)
     })
-    list(obs = as.numeric(dObs), sim = as.numeric(dSim))
+    list(obs = dObs, sim = dSim)
   }
 }
