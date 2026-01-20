@@ -17,7 +17,7 @@ runCalibration(
 )
 }
 \arguments{
-\item{MCMC_samples}{Matrix/data.frame of posterior draws from the observed-data fit.}
+\item{MCMC_samples}{Matrix of posterior draws from the observed-data fit.}
 
 \item{observed_data}{Observed dataset (any R object).}
 
@@ -38,7 +38,7 @@ returning the indices of rows to use as seeds for calibration.}
 \item{...}{Not used currently.}
 }
 \value{
-A list (later your cpppResults) with observed discrepancies and replicated discrepancies / PPP skeleton.
+a list (future \code{S3} class \code{cpppResults} objects) containing the cppp, observed and replicated ppp, observed discrepancies and replicated discrepancies.
 }
 \description{
 Run posterior predictive calibration

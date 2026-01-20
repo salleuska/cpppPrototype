@@ -25,7 +25,7 @@ runCalibrationNIMBLE(
 \item{dataNames}{Optional character vector of data node names. If NULL,
 nodes flagged as data in the model are used.}
 
-\item{paramNames}{Character vector of parameter node names to monitor.}
+\item{paramNames}{Character vector of parameter node names to monitor. (SP: if NULL some default?)}
 
 \item{disc_fun}{Function \verb{function(data, theta_row, control)} returning a
 scalar or vector discrepancy for one posterior draw.}

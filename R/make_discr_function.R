@@ -1,50 +1,51 @@
 #' Discrepancy extractor (online)
 #'
-#' Returns a `disc_fun` that reads already-computed discrepancy columns
+#' Returns a `discFun` that reads already-computed discrepancy columns
 #' (observed vs replicated) from the MCMC output and returns them for use
 #' in `runCalibration()`, which computes the PPP.
 #'
 #' @param colObs Character. Column name for observed discrepancies.
 #' @param colSim Character. Column name for replicated discrepancies.
 #'
-#' @return A function `function(MCMC_samples, new_data, ...)` that returns
+#' @return A function `function(MCMCSamples, newData, ...)` that returns
 #'   `list(obs = <numeric>, sim = <numeric>)` with equal lengths.
 #'
 #' @export
-make_col_disc_fun <- function(colObs = "discrepancy_model",
-                              colSim = "discrepancy_simulated") {
-  function(MCMC_samples, ...) {
+
+make_col_discFun <- function(colObs = "discrepancy_model",
+                             colSim = "discrepancy_simulated") {
+  function(MCMCSamples, ...) {
     ## check that the discrepancy columns are in the samples
-    if (!all(c(colObs, colSim) %in% colnames(MCMC_samples))) {
+    if (!all(c(colObs, colSim) %in% colnames(MCMCSamples))) {
       stop(sprintf("Columns '%s' and/or '%s' not found in new_samples.", colObs, colSim))
     }
     list(
-      obs = as.numeric(MCMC_samples[, colObs]),
-      sim = as.numeric(MCMC_samples[, colSim])
+      obs = as.numeric(MCMCSamples[, colObs]),
+      sim = as.numeric(MCMCSamples[, colSim])
     )
   }
 }
 
 #' Make offline discrepancy function
 #'
-#' Creates a `disc_fun` that computes observed and replicated discrepancies
+#' Creates a `discFun` that computes observed and replicated discrepancies
 #' for each posterior draw. This is the "offline" version used when the
 #' MCMC output does not already include discrepancy columns.
 #'
-#' The returned function expects to receive MCMC samples (`MCMC_samples`)
-#' and the corresponding dataset (`new_data`). It uses the model-specific
+#' The returned function expects to receive MCMC samples (`MCMCSamples`)
+#' and the corresponding dataset (`newData`). It uses the model-specific
 #' functions provided in `control` to simulate replicated data and compute
 #' the discrepancy values.
 #'
 #' @param control A list containing at least two functions:
 #'   \describe{
-#'     \item{new_data_fun}{A function `function(theta_row, ...)` that simulates one
+#'     \item{simulateNewDataFun}{A function `function(theta_row, ...)` that simulates one
 #'       replicated dataset `y*` given a single parameter draw.}
 #'     \item{discrepancy}{A function `function(data, theta_row, ...)` that returns
 #'       the scalar discrepancy `D(data, θ)` for one draw.}
 #'   }
 #'
-#' @return A function of the form `function(MCMC_samples, new_data, ...)`
+#' @return A function of the form `function(MCMCSamples, newData, ...)`
 #'   that returns a list with two numeric vectors:
 #'   \itemize{
 #'     \item `obs`: discrepancies for the observed (replicate) data.
@@ -54,25 +55,26 @@ make_col_disc_fun <- function(colObs = "discrepancy_model",
 #' @examples
 #' \dontrun{
 #' control <- list(
-#'   new_data_fun = function(theta) rnorm(10, theta),
+#'   simulateNewDataFun = function(theta) rnorm(10, theta),
 #'   discrepancy  = function(data, theta) mean((data - theta)^2)
 #' )
-#' disc_fun <- make_offline_disc_fun(control)
+#' discFun <- make_offline_discFun(control)
 #' }
 #'
 #' @export
-make_offline_disc_fun <- function(control) {
-  function(MCMC_samples, new_data, ...) {
+
+make_offline_discFun <- function(control) {
+  function(MCMCSamples, newData, ...) {
     ## Offline discrepancy calculator: compute D(data, theta) and D(y*, theta)
-    if (!is.list(control) || !all(c("new_data_fun", "discrepancy") %in% names(control))) {
-      stop("control must be a list with elements 'new_data_fun' and 'discrepancy'.")
+    if (!is.list(control) || !all(c("simulateNewDataFun", "discrepancy") %in% names(control))) {
+      stop("control must be a list with elements 'simulateNewDataFun' and 'discrepancy'.")
     }
-    new_data_fun <- control$new_data_fun
+    simulateNewDataFun <- control$simulateNewDataFun
     discrepancy  <- control$discrepancy
 
-    dObs <- apply(MCMC_samples, 1, function(th) discrepancy(new_data, th, ...))
-    dSim <- apply(MCMC_samples, 1, function(th) {
-      y <- new_data_fun(th, ...)
+    dObs <- apply(MCMCSamples, 1, function(th) discrepancy(newData, th, ...))
+    dSim <- apply(MCMCSamples, 1, function(th) {
+      y <- simulateNewDataFun(th, ...)
       discrepancy(y, th, ...)
     })
     list(obs = dObs, sim = dSim)

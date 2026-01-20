@@ -6,80 +6,80 @@ test_that("runCalibration returns numeric PPP vector of correct length", {
 
   set.seed(1)
 
-  observed_data <- rnorm(20)
+  observedData <- rnorm(20)
   # Fake "long-run" MCMC samples
-  MCMC_samples <- matrix(0, nrow = 10, ncol = 1)
+  MCMCSamples <- matrix(0, nrow = 10, ncol = 1)
 
-  # Toy new_data_fun: ignore MCMC_samples, just simulate data
-  new_data_fun <- function(MCMC_samples, ...) {
+  # Toy simulateNewDataFun: ignore MCMCSamples, just simulate data
+  simulateNewDataFun <- function(MCMCSamples, ...) {
     rnorm(20)
   }
 
-  # Toy MCMC_fun: given data, return a "chain" whose mean depends on the data
-  MCMC_fun <- function(new_data, control, ...) {
-    theta <- rnorm(100, mean(new_data), sd = 1 / sqrt(length(new_data)))
+  # Toy MCMCFun: given data, return a "chain" whose mean depends on the data
+  MCMCFun <- function(newData, control, ...) {
+    theta <- rnorm(100, mean(newData), sd = 1 / sqrt(length(newData)))
     cbind(theta = theta)
   }
 
-  # Toy disc_fun: discrepancy is |mean(y)|; PPP via comparing |theta| to |mean(y)|
-  disc_fun <- function(MCMC_samples, ...) {
-    d_obs <- abs(mean(MCMC_samples[, "theta"]))
-    d_rep <- abs(MCMC_samples[, "theta"])  # pretend these are replicated discrepancies
+  # Toy discFun: discrepancy is |mean(y)|; PPP via comparing |theta| to |mean(y)|
+  discFun <- function(MCMCSamples, ...) {
+    discObs <- abs(mean(MCMCSamples[, "theta"]))
+    discRep <- abs(MCMCSamples[, "theta"])  # pretend these are replicated discrepancies
     list(
-      rep = d_rep,
-      obs = d_obs
+      rep = discRep,
+      obs = discObs
     )
   }
 
-  n_reps <- 5
+  nReps <- 5
 
-  ppp <- runCalibration(
-    MCMC_samples = MCMC_samples,
-    observed_data = observed_data,
-    MCMC_fun     = MCMC_fun,
-    new_data_fun = new_data_fun,
-    disc_fun     = disc_fun,
-    n_reps     = n_reps
+  repPPP <- runCalibration(
+    MCMCSamples = MCMCSamples,
+    observedData = observedData,
+    MCMCFun     = MCMCFun,
+    simulateNewDataFun = simulateNewDataFun,
+    discFun     = discFun,
+    nReps     = nReps
   )
 
-  expect_type(ppp, "double")
-  expect_length(ppp, n_reps)
-  expect_true(all(is.finite(ppp)))
-  expect_true(all(ppp >= 0 & ppp <= 1))
+  expect_type(repPPP, "double")
+  expect_length(repPPP, nReps)
+  expect_true(all(is.finite(repPPP)))
+  expect_true(all(repPPP >= 0 & repPPP <= 1))
 })
 
-test_that("runCalibration checks n_reps and disc_fun output", {
+test_that("runCalibration checks nReps and discFun output", {
   skip_if_not("runCalibration" %in% ls("package:cpppPrototype"),
               "runCalibration() not exported yet")
 
-  observed_data <- rnorm(20)
-  MCMC_samples <- matrix(0, nrow = 5, ncol = 1)
+  observedData <- rnorm(20)
+  MCMCSamples <- matrix(0, nrow = 5, ncol = 1)
 
-  new_data_fun <- function(MCMC_samples, ...) rnorm(10)
-  MCMC_fun     <- function(new_data, control, ...) matrix(new_data, ncol = 1)
+  simulateNewDataFun <- function(MCMCSamples, ...) rnorm(10)
+  MCMCFun     <- function(newData, control, ...) matrix(newData, ncol = 1)
 
-  bad_disc_fun <- function(mcmc_samples, ...) {
+  bad_discFun <- function(MCMCSamples, ...) {
     0.5  # numeric scalar, no $rep / $obs
   }
 
-  # n_reps must be positive integer
+  # nReps must be positive integer
   expect_error(
-    runCalibration(MCMC_samples,
-                   observed_data,
-                   MCMC_fun,
-                   new_data_fun,
-                   bad_disc_fun,
-                   n_reps = 0),
+    runCalibration(MCMCSamples,
+                   observedData,
+                   MCMCFun,
+                   simulateNewDataFun,
+                   bad_discFun,
+                   nReps = 0),
     "positive integer"
   )
 
-  # disc_fun must return list with $rep and $obs
+  # discFun must return list with $rep and $obs
   expect_error(
-    runCalibration(MCMC_samples,
-                   observed_data, MCMC_fun,
-                   new_data_fun,
-                   bad_disc_fun,
-                   n_reps = 1),
+    runCalibration(MCMCSamples,
+                   observedData, MCMCFun,
+                   simulateNewDataFun,
+                   bad_discFun,
+                   nReps = 1),
     "list with components `rep` and `obs`"
   )
 })

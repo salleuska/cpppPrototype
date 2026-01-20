@@ -4,14 +4,14 @@
 #' @param dataNames Optional character vector of data node names. If NULL,
 #'   nodes flagged as data in the model are used.
 #' @param paramNames Character vector of parameter node names to monitor. (SP: if NULL some default?)
-#' @param disc_fun Function `function(data, theta_row, control)` returning a
+#' @param discFun Function `function(data, theta_row, control)` returning a
 #'   scalar or vector discrepancy for one posterior draw.
-#' @param new_data_fun Function `function(theta_row, observed_data, control)` that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.
-#' @param n_reps Number of calibration replications.
+#' @param simulateNewDataFun Function `function(theta_row, observedData, control)` that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.
+#' @param nReps Number of calibration replications.
 #' @param MCMCcontrolMain List with `niter`, `nburnin`, `thin` for main chain.
 #' @param MCMCcontrolRep List with `niter`, `nburnin`, `thin` for calibration chains.
 #' @param mcmcConfFun Optional function `function(model)` returning an MCMC configuration.
-#' @param row_selector Optional row selector (see runCalibration()).
+#' @param drawIndices Optional row selector (see runCalibration()).
 #' @param control List of additional options passed to discrepancy / helpers.
 #' @param ... Not used currently.
 #' @export
@@ -20,13 +20,13 @@ runCalibrationNIMBLE <- function(
     model,
     dataNames    = NULL,
     paramNames,
-    disc_fun,
-    new_data_fun,
-    n_reps       = 100,
+    discFun,
+    simulateNewDataFun,
+    nReps       = 100,
     MCMCcontrolMain = list(niter = 5000, nburnin = 1000, thin = 1),
     MCMCcontrolRep  = list(niter = 500,  nburnin = 0,    thin = 1),
     mcmcConfFun = NULL,
-    row_selector = NULL,
+    drawIndices = NULL,
     control = list(),
     ...
 ) {
@@ -65,44 +65,44 @@ runCalibrationNIMBLE <- function(
   cmcmc          <- compileNimble(mcmcUncompiled, project = model, resetFunctions = TRUE)
 
   ## 2. Run main chain on observed data
-  main_out <- runMCMC(
+  obsMCMC <- runMCMC(
     cmcmc,
     niter   = MCMCcontrolMain$niter,
     nburnin = MCMCcontrolMain$nburnin,
     thin    = MCMCcontrolMain$thin
   )
-  MCMC_samples <- as.matrix(main_out)
+  MCMCSamples <- as.matrix(obsMCMC)
 
   ## Extract observed data from the model
   ## SP: need to think better if data is a vector/matrix/array - something else?
-  observed_data <- cmodel[[dataNames]]
+  observedData <- cmodel[[dataNames]]
 
 
-  ## 4. Build MCMC_fun for replicated datasets
+  ## 4. Build MCMCFun for replicated datasets
   ## SP: do we want a make_MCMCfun?
-  MCMC_fun <- function(new_data,
+  MCMCFun <- function(newData,
                        control) {
     # assign new data into cmodel
-    cmodel[[dataNames]] <- new_data
+    cmodel[[dataNames]] <- newData
     # run short chain
-    rep_out <- runMCMC(
+    repMCMC <- runMCMC(
       cmcmc,
       niter   = MCMCcontrolRep$niter,
       nburnin = MCMCcontrolRep$nburnin,
       thin    = MCMCcontrolRep$thin
     )
-    as.matrix(rep_out)
+    as.matrix(repMCMC)
   }
 
   ## 5. Call generic engine
   runCalibration(
-    MCMC_samples  = MCMC_samples,
-    observed_data = observed_data,
-    MCMC_fun      = MCMC_fun,
-    new_data_fun  = new_data_fun,
-    disc_fun      = disc_fun,
-    n_reps        = n_reps,
-    row_selector  = row_selector,
+    MCMCSamples  = MCMCSamples,
+    observedData = observedData,
+    MCMCFun      = MCMCFun,
+    simulateNewDataFun  = simulateNewDataFun,
+    discFun      = discFun,
+    nReps        = nReps,
+    drawIndices  = drawIndices,
     control       = control
   )
 

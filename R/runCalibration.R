@@ -4,108 +4,109 @@
 
 #' Run posterior predictive calibration
 #'
-#' @param MCMC_samples Matrix of posterior draws from the observed-data fit.
-#' @param observed_data Observed dataset (any R object).
-#' @param MCMC_fun Function `function(new_data, control)` that runs a short MCMC  on `new_data` and returns posterior samples.
-#' @param new_data_fun Function `function(theta_row, observed_data, control)` that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.
-#' @param disc_fun Function `function(MCMC_samples, data, control)` that returns  a list with at least a numeric vector `D` of discrepancy values, one per row
-#'   of `MCMC_samples`.
-#' @param n_reps Number of calibration replications.
-#' @param row_selector Optional function `function(MCMC_samples, n_reps, control)`
+#' @param MCMCSamples Matrix of posterior draws from the observed-data fit.
+#' @param observedData Observed dataset (any R object).
+#' @param MCMCFun Function `function(newData, control)` that runs a short MCMC  on `newData` and returns posterior samples.
+#' @param simulateNewDataFun Function `function(thetaRow, observedData, control)` that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.
+#' @param discFun Function `function(MCMCSamples, data, control)` that returns  a list with at least a numeric vector `D` of discrepancy values, one per row
+#'   of `MCMCSamples`.
+#' @param nReps Number of calibration replications.
+#' @param drawIndexSelector Optional function `function(MCMCSamples, nReps, control)`
 #'   returning the indices of rows to use as seeds for calibration.
 #' @param control List of additional backend-specific arguments.
 #' @param ... Not used currently.
 #'
-#' @return a list (future `S3` class `cpppResults` objects) containing the cppp, observed and replicated ppp, observed discrepancies and replicated discrepancies.
+#' @return a list (future `S3` class `cpppResult` objects) containing the CPPP, observed and replicated repPPP, observed discrepancies and replicated discrepancies.
 #' @export
 
 runCalibration <- function(
-    MCMC_samples,
-    observed_data,
-    MCMC_fun,
-    new_data_fun,
-    disc_fun,
-    n_reps,
-    row_selector = NULL,
+    MCMCSamples,
+    observedData,
+    MCMCFun,
+    simulateNewDataFun,
+    discFun,
+    nReps,
+    drawIndexSelector = NULL,
     control = list(),
     ...
 ) {
-  MCMC_samples <- as.matrix(MCMC_samples)
-  n_draws      <- nrow(MCMC_samples)
+  MCMCSamples <- as.matrix(MCMCSamples)
+  n_draws      <- nrow(MCMCSamples)
 
-  if (n_draws < 1L) stop("MCMC_samples must contain at least one row.")
+  if (n_draws < 1L) stop("MCMCSamples must contain at least one row.")
 
-  ##  Choose rows in MCMC_samples to simulate data for calibration
-  if (is.null(row_selector)) {
-    row_indices <- floor(seq(1, n_draws, length.out = n_reps))
+  ##  Choose rows in MCMCSamples to simulate data for calibration
+  if (is.null(drawIndexSelector)) {
+    drawnIndices <- floor(seq(1, n_draws, length.out = nReps))
   } else {
-    row_indices <- row_selector(MCMC_samples, n_reps, control)
+    drawnIndices <- drawIndexSelector(MCMCSamples, nReps, control)
   }
-  if (length(row_indices) != n_reps) {
-    stop("row_selector must return exactly n_reps indices.")
+  if (length(row_indices) != nReps) {
+    stop("drawIndexSelector must return exactly nReps indices.")
   }
 
   ## 2. Discrepancies + PPP for the observed data
-  obs_disc <- disc_fun(MCMC_samples = MCMC_samples,
-                       new_data     = observed_data,
-                       control      = control)
-  if (!all(c("obs", "sim") %in% names(obs_disc))) {
-    stop("disc_fun must return a list with components 'obs' and 'sim'.")
+  obsDisc <- discFun(MCMCSamples  = MCMCSamples,
+                       newData     = observedData,
+                       control     = control)
+  if (!all(c("obs", "sim") %in% names(obsDisc))) {
+    stop("discFun must return a list with components 'obs' and 'sim'.")
   }
-  obs_obs <- as.numeric(obs_disc$obs)
-  obs_sim <- as.numeric(obs_disc$sim)
-  if (length(obs_obs) != length(obs_sim)) {
+  ## discrepancy computed on real data
+  origObsDisc <- as.numeric(obsDisc$obs)
+  origSimDisc <- as.numeric(obsDisc$sim)
+  if (length(origObsDisc) != length(origSimDisc)) {
     stop("'obs' and 'sim' must have the same length.")
   }
 
   # scalar PPP for the observed data
-  PPP_obs <- mean(obs_sim >= obs_obs)
+  obsPPP <- mean(origSimDisc >= origObsDisc)
 
   ## 3. Calibration worlds: PPP for each replicates
-  PPP_rep <- numeric(n_reps)
-  rep_disc_list <- vector("list", n_reps)
+  repPPP <- numeric(nReps)
+  repDiscList <- vector("list", nReps)
 
-  for (r in seq_len(n_reps)) {
-    theta_row <- MCMC_samples[row_indices[r], , drop = FALSE]
+  for (r in seq_len(nReps)) {
+    thetaRow <- MCMCSamples[row_indices[r], , drop = FALSE]
 
     # 3a. simulate a new dataset y^(r) from posterior predictive of the original model
-    new_data <- new_data_fun(theta_row = theta_row,
-                             observed_data = observed_data,
+    newData <- simulateNewDataFun(thetaRow = thetaRow,
+                             observedData = observedData,
                              control = control)
 
     # 3b. fit model on y^(r) (short chain)
-    MCMC_rep <- MCMC_fun(new_data = new_data,
+    repMCMC <- MCMCFun(newData = newData,
                          control  = control)
 
     # 3c. compute discrepancies + PPP in this world
-    rep_disc <- disc_fun(MCMC_samples = MCMC_rep,
-                         new_data     = new_data,
+    repDisc <- discFun(MCMCSamples = repMCMC,
+                         newData     = newData,
                          control      = control)
 
-    if (!all(c("obs", "sim") %in% names(rep_disc))) {
-      stop("disc_fun must return a list with components 'obs' and 'sim'.")
+    if (!all(c("obs", "sim") %in% names(repDisc))) {
+      stop("discFun must return a list with components 'obs' and 'sim'.")
     }
-    rep_obs <- as.numeric(rep_disc$obs)
-    rep_sim <- as.numeric(rep_disc$sim)
-    if (length(rep_obs) != length(rep_sim)) {
+    repObsDisc <- as.numeric(repDisc$obs)
+    repSimDisc <- as.numeric(repDisc$sim)
+    if (length(repObsDisc) != length(repSimDisc)) {
       stop("'obs' and 'sim' must have the same length in each calibration world.")
     }
 
-    PPP_rep[r]         <- mean(rep_sim >= rep_obs)
-    rep_disc_list[[r]] <- rep_disc
+    repPPP[r]         <- mean(repSimDisc >= repObsDisc)
+    repDiscList[[r]] <- repDisc
 
   }
 
-  ## 4. CPPP: how extreme PPP_obs is under the calibration distribution
-  CPPP <- mean(PPP_rep <= PPP_obs)
+  ## 4. CPPP: how extreme obsPPP is under the calibration distribution
+  CPPP <- mean(repPPP <= obsPPP)
 
   ## 5. Collect all discrepancies
   discrepancies <- list(
     obs = list(
-      obs = obs_obs,
-      sim = obs_sim
+      obs = origObsDisc,
+      sim = origSimDisc
     ),
-    rep = lapply(rep_disc_list, function(d) {
+    rep = lapply(repDiscList, function(d) {
       list(
         obs = as.numeric(d$obs),
         sim = as.numeric(d$sim)
@@ -114,12 +115,12 @@ runCalibration <- function(
   )
 
   ## 6. Return cpppResult object
-  new_cpppResults(
-    cppp         = CPPP,
-    ppp          = PPP_rep,
-    obs_ppp      = PPP_obs,
+  newCpppResult(
+    CPPP         = CPPP,
+    repPPP          = repPPP,
+    obsPPP      = obsPPP,
     discrepancies = discrepancies,
-    row_indices   = row_indices
+    drawnIndices   = drawnIndices
   )
 }
 
