@@ -27,10 +27,9 @@ nodes flagged as data in the model are used.}
 
 \item{paramNames}{Character vector of parameter node names to monitor. (SP: if NULL some default?)}
 
-\item{discFun}{Function \verb{function(data, theta_row, control)} returning a
-scalar or vector discrepancy for one posterior draw.}
+\item{discFun}{Function \verb{function(MCMCSamples, newData, control)} that returns \code{list(obs, sim)} with one discrepancy value per posterior draw of \code{MCMCSamples}.}
 
-\item{simulateNewDataFun}{Function \verb{function(theta_row, observedData, control)} that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.}
+\item{simulateNewDataFun}{Function \verb{function(thetaRow, control)} that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.}
 
 \item{nReps}{Number of calibration replications.}
 

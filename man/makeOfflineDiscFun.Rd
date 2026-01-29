@@ -9,14 +9,14 @@ makeOfflineDiscFun(control)
 \arguments{
 \item{control}{A list containing at least two functions:
 \describe{
-\item{simulateNewDataFun}{A function \verb{function(thetaRow, ...)} that simulates one
-replicated dataset \verb{y*} given a single parameter draw.}
+\item{simulateNewDataFun}{A function \verb{function(thetaRow, control)} that simulates one
+replicated dataset \verb{y*} given one draws of the parameters}
 \item{discrepancy}{A function \verb{function(data, thetaRow, ...)} that returns
 the scalar discrepancy \code{D(data, θ)} for one draw.}
 }}
 }
 \value{
-A function of the form \verb{function(MCMCSamples, newData, ...)}
+A function of the form \verb{function(MCMCSamples, targetData, ...)}
 that returns a list with two numeric vectors:
 \itemize{
 \item \code{obs}: discrepancies for the observed (replicate) data.
@@ -29,10 +29,12 @@ for each posterior draw. This is the "offline" version used when the
 MCMC output does not already include discrepancy columns.
 }
 \details{
-The returned function expects to receive MCMC samples (\code{MCMCSamples})
-and the corresponding dataset (\code{newData}). It uses the model-specific
-functions provided in \code{control} to simulate replicated data and compute
-the discrepancy values.
+The returned function evaluates discrepancies conditional on \code{targetData},
+which may be the original observed dataset or a replicated dataset from a
+calibration world. It expects posterior samples (\code{MCMCSamples}) and the
+corresponding \code{targetData}, and uses the model-specific functions in
+\code{control} to generate posterior predictive replicates and compute the
+discrepancy values.
 }
 \examples{
 \dontrun{

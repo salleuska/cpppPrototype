@@ -32,20 +32,22 @@ makeColDiscFun <- function(colObs = "discrepancy_model",
 #' for each posterior draw. This is the "offline" version used when the
 #' MCMC output does not already include discrepancy columns.
 #'
-#' The returned function expects to receive MCMC samples (`MCMCSamples`)
-#' and the corresponding dataset (`newData`). It uses the model-specific
-#' functions provided in `control` to simulate replicated data and compute
-#' the discrepancy values.
+#' The returned function evaluates discrepancies conditional on `targetData`,
+#' which may be the original observed dataset or a replicated dataset from a
+#' calibration world. It expects posterior samples (`MCMCSamples`) and the
+#' corresponding `targetData`, and uses the model-specific functions in
+#' `control` to generate posterior predictive replicates and compute the
+#' discrepancy values.
 #'
 #' @param control A list containing at least two functions:
 #'   \describe{
-#'     \item{simulateNewDataFun}{A function `function(thetaRow, ...)` that simulates one
-#'       replicated dataset `y*` given a single parameter draw.}
+#'     \item{simulateNewDataFun}{A function `function(thetaRow, control)` that simulates one
+#'       replicated dataset `y*` given one draws of the parameters}
 #'     \item{discrepancy}{A function `function(data, thetaRow, ...)` that returns
 #'       the scalar discrepancy `D(data, θ)` for one draw.}
 #'   }
 #'
-#' @return A function of the form `function(MCMCSamples, newData, ...)`
+#' @return A function of the form `function(MCMCSamples, targetData, ...)`
 #'   that returns a list with two numeric vectors:
 #'   \itemize{
 #'     \item `obs`: discrepancies for the observed (replicate) data.
@@ -64,7 +66,7 @@ makeColDiscFun <- function(colObs = "discrepancy_model",
 #' @export
 
 makeOfflineDiscFun <- function(control) {
-  function(MCMCSamples, newData, ...) {
+  function(MCMCSamples, targetData, ...) {
     ## Offline discrepancy calculator: compute D(data, theta) and D(y*, theta)
     if (!is.list(control) || !all(c("simulateNewDataFun", "discrepancy") %in% names(control))) {
       stop("control must be a list with elements 'simulateNewDataFun' and 'discrepancy'.")
@@ -72,10 +74,10 @@ makeOfflineDiscFun <- function(control) {
     simulateNewDataFun <- control$simulateNewDataFun
     discrepancy  <- control$discrepancy
 
-    dObs <- apply(MCMCSamples, 1, function(th) discrepancy(newData, th, ...))
-    dSim <- apply(MCMCSamples, 1, function(th) {
-      y <- simulateNewDataFun(th, ...)
-      discrepancy(y, th, ...)
+    dObs <- apply(MCMCSamples, 1, function(thetaRow) discrepancy(targetData, thetaRow, ...))
+    dSim <- apply(MCMCSamples, 1, function(thetaRow) {
+      y <- simulateNewDataFun(thetaRow, control)
+      discrepancy(y, thetaRow, ...)
     })
     list(obs = dObs, sim = dSim)
   }

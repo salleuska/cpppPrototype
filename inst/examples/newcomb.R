@@ -76,7 +76,7 @@ newcombNewData <- function(thetaRow, paramNames, dataNames) {
 #   discrepancy  = min_disc
 # )
 
-discControl <- list(newDataFun = newcombNewData, discrepancy = asymm_disc)
+discControl <- list(simulateNewDataFun = newcombNewData, discrepancy = asymm_disc)
 discFun <- makeOfflineDiscFun(discControl)
 set.seed(1)
 
@@ -87,11 +87,9 @@ resNewcomb <- runCalibrationNIMBLE(
   discFun = discFun,
   simulateNewDataFun = newcomb_newData,
   nReps = 100,
-  MCMCcontrolMain = list(...),
-  MCMCcontrolRep = list(...)
+  MCMCcontrolMain = list(niter = 5000, nburnin = 1000, thin = 1),
+  MCMCcontrolRep  = list(niter = 500,  nburnin = 0,    thin = 1)
 )
-
-
 
 print(resNewcomb$cppp)
 print(resNewcomb$ppp)

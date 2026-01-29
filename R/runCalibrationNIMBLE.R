@@ -4,9 +4,8 @@
 #' @param dataNames Optional character vector of data node names. If NULL,
 #'   nodes flagged as data in the model are used.
 #' @param paramNames Character vector of parameter node names to monitor. (SP: if NULL some default?)
-#' @param discFun Function `function(data, theta_row, control)` returning a
-#'   scalar or vector discrepancy for one posterior draw.
-#' @param simulateNewDataFun Function `function(theta_row, observedData, control)` that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.
+#' @param discFun Function `function(MCMCSamples, newData, control)` that returns `list(obs, sim)` with one discrepancy value per posterior draw of `MCMCSamples`.
+#' @param simulateNewDataFun Function `function(thetaRow, control)` that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.
 #' @param nReps Number of calibration replications.
 #' @param MCMCcontrolMain List with `niter`, `nburnin`, `thin` for main chain.
 #' @param MCMCcontrolRep List with `niter`, `nburnin`, `thin` for calibration chains.

@@ -6,10 +6,9 @@
 #'
 #' @param MCMCSamples Matrix of posterior draws from the observed-data fit.
 #' @param observedData Observed dataset (any R object).
-#' @param MCMCFun Function `function(newData, control)` that runs a short MCMC  on `newData` and returns posterior samples.
-#' @param simulateNewDataFun Function `function(thetaRow, observedData, control)` that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.
-#' @param discFun Function `function(MCMCSamples, data, control)` that returns  a list with at least a numeric vector `D` of discrepancy values, one per row
-#'   of `MCMCSamples`.
+#' @param MCMCFun Function `function(targetData, control)` that runs a short MCMC conditional on `targetData`and returns posterior samples. `targetData` is the dataset treated as observed for the MCMC run.
+#' @param simulateNewDataFun Function `function(thetaRow, control)` that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.
+#' @param discFun Function `function(MCMCSamples, targetData, control)` that returns a list with components `obs` and `sim`, each a numeric vector over posterior draws. `targetData` is the dataset treated as observed for the discrepancy calculation.
 #' @param nReps Number of calibration replications.
 #' @param drawIndexSelector Optional function `function(MCMCSamples, nReps, control)`
 #'   returning the indices of rows to use as seeds for calibration.
@@ -71,15 +70,14 @@ runCalibration <- function(
 
     # 3a. simulate a new dataset y^(r) from posterior predictive of the original model
     newData <- simulateNewDataFun(thetaRow = thetaRow,
-                             observedData = observedData,
-                             control = control)
+                                  control  = control)
 
     # 3b. fit model on y^(r) (short chain)
-    repMCMC <- MCMCFun(newData = newData,
+    repMCMC <- MCMCFun(targetData = newData,
                          control  = control)
 
     # 3c. compute discrepancies + PPP in this world
-    repDisc <- discFun(MCMCSamples = repMCMC,
+    repDisc <- discFun(targetData = repMCMC,
                          newData     = newData,
                          control      = control)
 

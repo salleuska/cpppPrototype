@@ -21,12 +21,11 @@ runCalibration(
 
 \item{observedData}{Observed dataset (any R object).}
 
-\item{MCMCFun}{Function \verb{function(newData, control)} that runs a short MCMC  on \code{newData} and returns posterior samples.}
+\item{MCMCFun}{Function \verb{function(targetData, control)} that runs a short MCMC conditional on \code{targetData}and returns posterior samples. \code{targetData} is the dataset treated as observed for the MCMC run.}
 
-\item{simulateNewDataFun}{Function \verb{function(thetaRow, observedData, control)} that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.}
+\item{simulateNewDataFun}{Function \verb{function(thetaRow, control)} that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.}
 
-\item{discFun}{Function \verb{function(MCMCSamples, data, control)} that returns  a list with at least a numeric vector \code{D} of discrepancy values, one per row
-of \code{MCMCSamples}.}
+\item{discFun}{Function \verb{function(MCMCSamples, targetData, control)} that returns a list with components \code{obs} and \code{sim}, each a numeric vector over posterior draws. \code{targetData} is the dataset treated as observed for the discrepancy calculation.}
 
 \item{nReps}{Number of calibration replications.}
 
