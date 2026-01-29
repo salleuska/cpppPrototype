@@ -31,17 +31,17 @@ runCalibration <- function(
     ...
 ) {
   MCMCSamples <- as.matrix(MCMCSamples)
-  n_draws      <- nrow(MCMCSamples)
+  nDraws      <- nrow(MCMCSamples)
 
-  if (n_draws < 1L) stop("MCMCSamples must contain at least one row.")
+  if (nDraws < 1L) stop("MCMCSamples must contain at least one row.")
 
   ##  Choose rows in MCMCSamples to simulate data for calibration
   if (is.null(drawIndexSelector)) {
-    drawnIndices <- floor(seq(1, n_draws, length.out = nReps))
+    drawnIndices <- floor(seq(1, nDraws, length.out = nReps))
   } else {
     drawnIndices <- drawIndexSelector(MCMCSamples, nReps, control)
   }
-  if (length(row_indices) != nReps) {
+  if (length(drawnIndices) != nReps) {
     stop("drawIndexSelector must return exactly nReps indices.")
   }
 
@@ -67,7 +67,7 @@ runCalibration <- function(
   repDiscList <- vector("list", nReps)
 
   for (r in seq_len(nReps)) {
-    thetaRow <- MCMCSamples[row_indices[r], , drop = FALSE]
+    thetaRow <- MCMCSamples[drawnIndices[r], , drop = FALSE]
 
     # 3a. simulate a new dataset y^(r) from posterior predictive of the original model
     newData <- simulateNewDataFun(thetaRow = thetaRow,

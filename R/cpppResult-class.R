@@ -28,13 +28,13 @@ newCpppResult <- function(CPPP = NA_real_,
     ...
   )
   class(x) <- c("cpppResult", "list")
-  validate_cpppResult(x)
+  validateCpppResult(x)
 }
 
 # Minimal internal validator: keeps inputs sane but stays permissive
 
 #' @keywords internal
-validate_cpppResult <- function(x) {
+validateCpppResult <- function(x) {
   stopifnot(inherits(x, "cpppResult"))
 
   # CPPP: allow NA for now; if finite, must be a scalar in [0,1]
