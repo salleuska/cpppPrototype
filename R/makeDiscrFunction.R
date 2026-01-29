@@ -12,7 +12,7 @@
 #'
 #' @export
 
-make_col_discFun <- function(colObs = "discrepancy_model",
+makeColDiscFun <- function(colObs = "discrepancy_model",
                              colSim = "discrepancy_simulated") {
   function(MCMCSamples, ...) {
     ## check that the discrepancy columns are in the samples
@@ -39,9 +39,9 @@ make_col_discFun <- function(colObs = "discrepancy_model",
 #'
 #' @param control A list containing at least two functions:
 #'   \describe{
-#'     \item{simulateNewDataFun}{A function `function(theta_row, ...)` that simulates one
+#'     \item{simulateNewDataFun}{A function `function(thetaRow, ...)` that simulates one
 #'       replicated dataset `y*` given a single parameter draw.}
-#'     \item{discrepancy}{A function `function(data, theta_row, ...)` that returns
+#'     \item{discrepancy}{A function `function(data, thetaRow, ...)` that returns
 #'       the scalar discrepancy `D(data, θ)` for one draw.}
 #'   }
 #'
@@ -58,12 +58,12 @@ make_col_discFun <- function(colObs = "discrepancy_model",
 #'   simulateNewDataFun = function(theta) rnorm(10, theta),
 #'   discrepancy  = function(data, theta) mean((data - theta)^2)
 #' )
-#' discFun <- make_offline_discFun(control)
+#' discFun <- makeOfflineDiscFun(control)
 #' }
 #'
 #' @export
 
-make_offline_discFun <- function(control) {
+makeOfflineDiscFun <- function(control) {
   function(MCMCSamples, newData, ...) {
     ## Offline discrepancy calculator: compute D(data, theta) and D(y*, theta)
     if (!is.list(control) || !all(c("simulateNewDataFun", "discrepancy") %in% names(control))) {

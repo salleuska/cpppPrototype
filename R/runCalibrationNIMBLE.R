@@ -79,7 +79,7 @@ runCalibrationNIMBLE <- function(
 
 
   ## 4. Build MCMCFun for replicated datasets
-  ## SP: do we want a make_MCMCfun?
+  ## SP: do we want a function makeMCMCfun?
   MCMCFun <- function(newData,
                        control) {
     # assign new data into cmodel
