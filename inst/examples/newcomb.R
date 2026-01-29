@@ -8,12 +8,10 @@ library(cpppPrototype)
 
 ## 2) Data: Newcomb light-speed measurements
 ## Assuming light.txt is in the working directory
-newcombData <- list(
-  y = read.table("inst/examples/light.txt")$V1
-)
-constants <- list(
-  n = length(newcombData$y)
-)
+lightPath <- system.file("examples", "light.txt", package = "cpppPrototype")
+newcombData <- list(y = read.table(lightPath)$V1)
+
+constants <- list(n = length(newcombData$y))
 
 
 ## 3) NIMBLE model
@@ -41,14 +39,14 @@ paramNames <- c("mu", "log_sigma")
 ## 4) Offline discrepancy
 ## Discrepancy: data-only, min(y)
 
-min_disc <- function(data, theta_row, control) {
+min_disc <- function(data, thetaRow, control) {
   min(data)
 }
 
 ## asymmetry discrepancy using R
-asymm_disc <- function(data, theta_row, control) {
+asymm_disc <- function(data, thetaRow, control) {
 
-  mu <- theta_row["mu"]
+  mu <- thetaRow["mu"]
   dataSorted <- sort(data)
 
   abs(dataSorted[61] - mu) - abs(dataSorted[6] - mu)
@@ -57,8 +55,8 @@ asymm_disc <- function(data, theta_row, control) {
 
 ## function that generates new data
 
-newcomb_newData <- function(theta_row, paramNames, dataNames) {
-  theta_vec <- as.numeric(theta_row)
+newcombNewData <- function(thetaRow, paramNames, dataNames) {
+  theta_vec <- as.numeric(thetaRow)
 
   ## write parameters into the model
   for (nm in paramNames) {
@@ -78,30 +76,25 @@ newcomb_newData <- function(theta_row, paramNames, dataNames) {
 #   discrepancy  = min_disc
 # )
 
-disc_control <- list(
-  new_data_fun = newcomb_newData,
-  discrepancy  = asymm_disc
-)
-
-disc_fun <- make_offline_disc_fun(disc_control)
-
-
-
+discControl <- list(newDataFun = newcombNewData, discrepancy = asymm_disc)
+discFun <- makeOfflineDiscFun(discControl)
 set.seed(1)
-res_newcomb <- runCalibrationNIMBLE(
-  model      = newcomb_model,
-  dataNames  = dataNames,
+
+resNewcomb <- runCalibrationNIMBLE(
+  model = newcomb_model,
+  dataNames = dataNames,
   paramNames = paramNames,
-  disc_fun   = disc_fun,
-  new_data_fun = newcomb_newData,
-  n_reps       = 100,  # smallish number for quick runs
-  MCMCcontrolMain = list(niter = 10000, nburnin = 5000, thin = 1),
-  MCMCcontrolRep  = list(niter = 500, nburnin = 0,  thin = 1)
+  discFun = discFun,
+  simulateNewDataFun = newcomb_newData,
+  nReps = 100,
+  MCMCcontrolMain = list(...),
+  MCMCcontrolRep = list(...)
 )
 
 
-print(res_newcomb$cppp)
-print(res_newcomb$ppp)
+
+print(resNewcomb$cppp)
+print(resNewcomb$ppp)
 
 # obsDisc <- res_newcomb$discrepancies$obs
 # plot(obsDisc$obs, obsDisc$sim)

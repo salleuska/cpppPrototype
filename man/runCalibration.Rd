@@ -5,32 +5,32 @@
 \title{Run posterior predictive calibration}
 \usage{
 runCalibration(
-  MCMC_samples,
-  observed_data,
-  MCMC_fun,
-  new_data_fun,
-  disc_fun,
-  n_reps,
-  row_selector = NULL,
+  MCMCSamples,
+  observedData,
+  MCMCFun,
+  simulateNewDataFun,
+  discFun,
+  nReps,
+  drawIndexSelector = NULL,
   control = list(),
   ...
 )
 }
 \arguments{
-\item{MCMC_samples}{Matrix of posterior draws from the observed-data fit.}
+\item{MCMCSamples}{Matrix of posterior draws from the observed-data fit.}
 
-\item{observed_data}{Observed dataset (any R object).}
+\item{observedData}{Observed dataset (any R object).}
 
-\item{MCMC_fun}{Function \verb{function(new_data, control)} that runs a short MCMC  on \code{new_data} and returns posterior samples.}
+\item{MCMCFun}{Function \verb{function(newData, control)} that runs a short MCMC  on \code{newData} and returns posterior samples.}
 
-\item{new_data_fun}{Function \verb{function(theta_row, observed_data, control)} that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.}
+\item{simulateNewDataFun}{Function \verb{function(thetaRow, observedData, control)} that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.}
 
-\item{disc_fun}{Function \verb{function(MCMC_samples, data, control)} that returns  a list with at least a numeric vector \code{D} of discrepancy values, one per row
-of \code{MCMC_samples}.}
+\item{discFun}{Function \verb{function(MCMCSamples, data, control)} that returns  a list with at least a numeric vector \code{D} of discrepancy values, one per row
+of \code{MCMCSamples}.}
 
-\item{n_reps}{Number of calibration replications.}
+\item{nReps}{Number of calibration replications.}
 
-\item{row_selector}{Optional function \verb{function(MCMC_samples, n_reps, control)}
+\item{drawIndexSelector}{Optional function \verb{function(MCMCSamples, nReps, control)}
 returning the indices of rows to use as seeds for calibration.}
 
 \item{control}{List of additional backend-specific arguments.}
@@ -38,7 +38,7 @@ returning the indices of rows to use as seeds for calibration.}
 \item{...}{Not used currently.}
 }
 \value{
-a list (future \code{S3} class \code{cpppResults} objects) containing the cppp, observed and replicated ppp, observed discrepancies and replicated discrepancies.
+a list (future \code{S3} class \code{cpppResult} objects) containing the CPPP, observed and replicated repPPP, observed discrepancies and replicated discrepancies.
 }
 \description{
 Run posterior predictive calibration

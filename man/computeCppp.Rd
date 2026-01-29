@@ -4,12 +4,12 @@
 \alias{computeCppp}
 \title{Compute the calibrated posterior predictive p-value}
 \usage{
-computeCppp(pppObs, pppCal)
+computeCppp(obsPPP, repPPP)
 }
 \arguments{
-\item{pppObs}{Numeric scalar in \eqn{[0,1]}. The observed PPP.}
+\item{obsPPP}{Numeric scalar in \eqn{[0,1]}. The observed PPP.}
 
-\item{pppCal}{Numeric vector in \eqn{[0,1]}. PPPs from calibration datasets.}
+\item{repPPP}{Numeric vector in \eqn{[0,1]}. PPPs from calibration datasets.}
 }
 \value{
 Numeric scalar in \eqn{[0,1]}, the calibrated PPP.

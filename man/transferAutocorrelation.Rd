@@ -4,14 +4,14 @@
 \alias{transferAutocorrelation}
 \title{Estimate transfer autocorrelation (placeholder)}
 \usage{
-transferAutocorrelation(deltaChain, pppObs, pppRep, mTilde, ...)
+transferAutocorrelation(deltaChain, obsPPP, repPPP, mTilde, ...)
 }
 \arguments{
 \item{deltaChain}{Data or structure containing \eqn{D(y^{rep}, \theta) - D(y^{obs}, \theta)} values.}
 
-\item{pppObs}{Numeric scalar in  \eqn{[0,1]}.}
+\item{obsPPP}{Numeric scalar in  \eqn{[0,1]}.}
 
-\item{pppRep}{Numeric vector in  \eqn{[0,1]}.}
+\item{repPPP}{Numeric vector in  \eqn{[0,1]}.}
 
 \item{mTilde}{Numeric vector or scalar; effective Monte Carlo sample size per replication.}
 
