@@ -4,13 +4,13 @@
 #' @param dataNames Optional character vector of data node names. If NULL,
 #'   nodes flagged as data in the model are used.
 #' @param paramNames Character vector of parameter node names to monitor. (SP: if NULL some default?)
-#' @param discFun Function `function(MCMCSamples, newData, control)` that returns `list(obs, sim)` with one discrepancy value per posterior draw of `MCMCSamples`.
+#' @param discFun Function `function(MCMCSamples, targetData, control)` that returns `list(obs, sim)` with one discrepancy value per posterior draw of `MCMCSamples`.
 #' @param simulateNewDataFun Function `function(thetaRow, control)` that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.
 #' @param nReps Number of calibration replications.
 #' @param MCMCcontrolMain List with `niter`, `nburnin`, `thin` for main chain.
 #' @param MCMCcontrolRep List with `niter`, `nburnin`, `thin` for calibration chains.
 #' @param mcmcConfFun Optional function `function(model)` returning an MCMC configuration.
-#' @param drawIndices Optional row selector (see runCalibration()).
+#' @param drawIndexSelector Optional row selector (see runCalibration()).
 #' @param control List of additional options passed to discrepancy / helpers.
 #' @param ... Not used currently.
 #' @export
@@ -25,7 +25,7 @@ runCalibrationNIMBLE <- function(
     MCMCcontrolMain = list(niter = 5000, nburnin = 1000, thin = 1),
     MCMCcontrolRep  = list(niter = 500,  nburnin = 0,    thin = 1),
     mcmcConfFun = NULL,
-    drawIndices = NULL,
+    drawIndexSelector = NULL,
     control = list(),
     ...
 ) {
@@ -78,21 +78,29 @@ runCalibrationNIMBLE <- function(
 
 
   ## 4. Build MCMCFun for replicated datasets
-  ## SP: do we want a function makeMCMCfun?
-  MCMCFun <- function(newData,
-                       control) {
-    # assign new data into cmodel
-    cmodel[[dataNames]] <- newData
-    # run short chain
+  ## SP: do we want a function makeMCMCfun for specific configurations?
+  MCMCFun <- function(targetData, control) {
+    cmodel[[dataNames]] <- targetData
     repMCMC <- runMCMC(
       cmcmc,
-      niter   = MCMCcontrolRep$niter,
-      nburnin = MCMCcontrolRep$nburnin,
-      thin    = MCMCcontrolRep$thin
+      niter   = control$niter,
+      nburnin = control$nburnin,
+      thin    = control$thin
     )
     as.matrix(repMCMC)
   }
 
+  defaultControl <- list(
+    mcmc = MCMCcontrolRep,
+    disc = list(
+      model      = model,
+      dataNames  = dataNames,
+      paramNames = paramNames
+    ),
+    draw = list()
+  )
+
+  control <- modifyList(defaultControl, control)
   ## 5. Call generic engine
   runCalibration(
     MCMCSamples  = MCMCSamples,
@@ -101,7 +109,7 @@ runCalibrationNIMBLE <- function(
     simulateNewDataFun  = simulateNewDataFun,
     discFun      = discFun,
     nReps        = nReps,
-    drawIndices  = drawIndices,
+    drawIndexSelector  = drawIndexSelector,
     control       = control
   )
 

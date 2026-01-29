@@ -12,8 +12,24 @@
 #' @param nReps Number of calibration replications.
 #' @param drawIndexSelector Optional function `function(MCMCSamples, nReps, control)`
 #'   returning the indices of rows to use as seeds for calibration.
-#' @param control List of additional backend-specific arguments.
-#' @param ... Not used currently.
+#' @param control Optional list of specific arguments passed to the
+#'   components used by `runCalibration()`. For convenience, `control` may be
+#'   a flat list, in which case it is passed unchanged to all components.
+#'
+#'   Alternatively, `control` may be a structured list with named sublists,
+#'   which are routed to different stages of the calibration:
+#'   \describe{
+#'     \item{mcmc}{Arguments or objects passed to `MCMCFun`, typically used
+#'       to control short MCMC runs in replicated calibration worlds.}
+#'     \item{disc}{Arguments or objects passed to `simulateNewDataFun` and
+#'       `discFun`, typically used for data simulation and discrepancy
+#'       calculation (e.g., model objects, node names).}
+#'     \item{draw}{Arguments passed to `drawIndexSelector`, if provided.}
+#'   }
+#'
+#'   This structure allows backend-specific state (such as NIMBLE models
+#'   and compiled MCMC objects) to be cleanly separated while remaining
+#'   backward compatible with simpler uses.#' @param ... Not used currently.
 #'
 #' @return a list (future `S3` class `cpppResult` objects) containing the CPPP, observed and replicated repPPP, observed discrepancies and replicated discrepancies.
 #' @export
@@ -29,16 +45,21 @@ runCalibration <- function(
     control = list(),
     ...
 ) {
+
   MCMCSamples <- as.matrix(MCMCSamples)
   nDraws      <- nrow(MCMCSamples)
-
   if (nDraws < 1L) stop("MCMCSamples must contain at least one row.")
+
+  ## check what controls contains by role
+  mcmcControl <- if (!is.null(control$mcmc)) control$mcmc else control
+  discControl <- if (!is.null(control$disc)) control$disc else control
+  drawControl <- if (!is.null(control$draw)) control$draw else control
 
   ##  Choose rows in MCMCSamples to simulate data for calibration
   if (is.null(drawIndexSelector)) {
     drawnIndices <- floor(seq(1, nDraws, length.out = nReps))
   } else {
-    drawnIndices <- drawIndexSelector(MCMCSamples, nReps, control)
+    drawnIndices <- drawIndexSelector(MCMCSamples, nReps, drawControl)
   }
   if (length(drawnIndices) != nReps) {
     stop("drawIndexSelector must return exactly nReps indices.")
@@ -46,8 +67,8 @@ runCalibration <- function(
 
   ## 2. Discrepancies + PPP for the observed data
   obsDisc <- discFun(MCMCSamples  = MCMCSamples,
-                       newData     = observedData,
-                       control     = control)
+                     targetData   = observedData,
+                     control      = discControl)
   if (!all(c("obs", "sim") %in% names(obsDisc))) {
     stop("discFun must return a list with components 'obs' and 'sim'.")
   }
@@ -70,16 +91,16 @@ runCalibration <- function(
 
     # 3a. simulate a new dataset y^(r) from posterior predictive of the original model
     newData <- simulateNewDataFun(thetaRow = thetaRow,
-                                  control  = control)
+                                  control  = discControl)
 
     # 3b. fit model on y^(r) (short chain)
     repMCMC <- MCMCFun(targetData = newData,
-                         control  = control)
+                         control  = mcmcControl)
 
     # 3c. compute discrepancies + PPP in this world
-    repDisc <- discFun(targetData = repMCMC,
-                         newData     = newData,
-                         control      = control)
+    repDisc <- discFun(MCMCSamples = repMCMC,
+                       targetData = newData,
+                         control  = discControl)
 
     if (!all(c("obs", "sim") %in% names(repDisc))) {
       stop("discFun must return a list with components 'obs' and 'sim'.")
@@ -114,11 +135,11 @@ runCalibration <- function(
 
   ## 6. Return cpppResult object
   newCpppResult(
-    CPPP         = CPPP,
-    repPPP          = repPPP,
-    obsPPP      = obsPPP,
+    CPPP          = CPPP,
+    repPPP        = repPPP,
+    obsPPP        = obsPPP,
     discrepancies = discrepancies,
-    drawnIndices   = drawnIndices
+    drawnIndices  = drawnIndices
   )
 }
 

@@ -7,7 +7,6 @@ library(nimble)
 library(cpppPrototype)
 
 ## 2) Data: Newcomb light-speed measurements
-## Assuming light.txt is in the working directory
 lightPath <- system.file("examples", "light.txt", package = "cpppPrototype")
 newcombData <- list(y = read.table(lightPath)$V1)
 
@@ -34,7 +33,7 @@ newcomb_model <- nimbleModel(
 )
 
 dataNames  <- "y"
-paramNames <- c("mu", "log_sigma")
+paramNames <- c("mu", "sigma")
 
 ## 4) Offline discrepancy
 ## Discrepancy: data-only, min(y)
@@ -43,95 +42,100 @@ min_disc <- function(data, thetaRow, control) {
   min(data)
 }
 
+
 ## asymmetry discrepancy using R
 asymm_disc <- function(data, thetaRow, control) {
-
   mu <- thetaRow["mu"]
   dataSorted <- sort(data)
-
   abs(dataSorted[61] - mu) - abs(dataSorted[6] - mu)
 }
 
+control <- list(
+  model      = newcomb_model,
+  dataNames  = dataNames,
+  paramNames = paramNames
+)
 
 ## function that generates new data
+newcombNewData <- function(thetaRow, control) {
+  model      <- control$model
+  dataNames  <- control$dataNames
+  paramNames <- control$paramNames
 
-newcombNewData <- function(thetaRow, paramNames, dataNames) {
-  theta_vec <- as.numeric(thetaRow)
+  theta <- thetaRow[paramNames]
 
-  ## write parameters into the model
   for (nm in paramNames) {
-    newcomb_model[[nm]] <<- theta_vec[[nm]]
+    model[[nm]] <- theta[[nm]]
   }
 
-  ## simulate downstream including data
-  newcomb_model$simulate(nodes = dataNames, includeData = TRUE)
-
-  newdata <- newcomb_model[[dataNames]]
-  newdata
+  model$simulate(nodes = dataNames, includeData = TRUE)
+  model[[dataNames]]
 }
 
-## Build disc_fun via the package helper
-# disc_control <- list(
-#   new_data_fun = newcomb_newData,
-#   discrepancy  = min_disc
+##########################################
+# 0) Run MCMC
+samples <- nimbleMCMC(
+  newcomb_model,
+  niter   = 5000,
+  nburnin = 1000,
+  monitors = paramNames
+)
+MCMCSamples <- as.matrix(samples)
+head(MCMCSamples)
+
+##  Check simulation
+# control <- list(
+#   model      = newcomb_model,
+#   dataNames  = dataNames,
+#   paramNames = paramNames
 # )
+#
+# theta1 <- MCMCSamples[1, , drop = TRUE]
+# ySim1 <- newcombNewData(thetaRow = theta1, control = control)
+#
+# str(ySim1)
+# length(ySim1)
+########################################################
+## Build disc_fun via the package helper
 
-discControl <- list(simulateNewDataFun = newcombNewData, discrepancy = asymm_disc)
-discFun <- makeOfflineDiscFun(discControl)
+discConfig <- list(
+  simulateNewDataFun = newcombNewData,
+  discrepancy        = asymm_disc
+)
+
+discFun <- makeOfflineDiscFun(discConfig)
 set.seed(1)
-
 resNewcomb <- runCalibrationNIMBLE(
   model = newcomb_model,
   dataNames = dataNames,
   paramNames = paramNames,
   discFun = discFun,
-  simulateNewDataFun = newcomb_newData,
+  simulateNewDataFun = newcombNewData,
   nReps = 100,
   MCMCcontrolMain = list(niter = 5000, nburnin = 1000, thin = 1),
-  MCMCcontrolRep  = list(niter = 500,  nburnin = 0,    thin = 1)
+  MCMCcontrolRep  = list(niter = 10,  nburnin = 0,    thin = 1),
+  control = control
 )
 
-print(resNewcomb$cppp)
-print(resNewcomb$ppp)
+print(resNewcomb$CPPP)
+print(resNewcomb$repPPP)
+
 
 # obsDisc <- res_newcomb$discrepancies$obs
 # plot(obsDisc$obs, obsDisc$sim)
 # abline()
 ############################
 
-
-
-
-######
-samples <- nimbleMCMC(newcomb_model, niter = 5000, nburn = 1000)
-newcomb_model$y <- newcombData$y
-
-# # Test disc_fun
-# new_data_test <- newcombData$y
-# res <- disc_fun(samples, new_data_test)
-# str(res)
-
-## 2. Discrepancies + PPP for the observed data
-obs_disc <- disc_fun(MCMC_samples = samples,
-                     new_data     = newcomb_model$y)
-plot(obsDisc$obs, obsDisc$sim)
-mean(obsDisc$sim > obsDisc$obs)
-abline()
-####
-## line by line check
-dObs <- apply(samples, 1, function(th) asymm_disc(newcomb_model$y, th))
-hist(dObs)
-sim_data <- list()
-disc_rep <- list()
-for(i in seq_along(NROW(samples))) {
-  sim_data[[i]]  <- newcomb_newData(samples[i, ], paramNames, dataNames)
-  disc_rep[[i]] <-   asymm_disc(samples[i, ], i)
-}
-# dSim <- apply(samples, 1, function(th) {
-#   y <- newcomb_newData(th)
-#   asymm_disc(y, th)
-# })
-hist(dSim)
-plot(dObs, dSim)
-abline()
-##############
+#
+# ##  Check discFun on the original (real) data
+# disc <- discFun(
+#   MCMCSamples = MCMCSamples,
+#   targetData  = newcombData$y,
+#   control     = control
+# )
+# plot(disc$obs, disc$sim,
+#      xlab = "D(y, θ)",
+#      ylab = "D(y*, θ)")
+# abline(0, 1)
+#
+# mean(disc$sim >= disc$obs)

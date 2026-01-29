@@ -36,49 +36,57 @@ makeColDiscFun <- function(colObs = "discrepancy_model",
 #' which may be the original observed dataset or a replicated dataset from a
 #' calibration world. It expects posterior samples (`MCMCSamples`) and the
 #' corresponding `targetData`, and uses the model-specific functions in
-#' `control` to generate posterior predictive replicates and compute the
+#' `discConfig` to generate posterior predictive replicates and compute the
 #' discrepancy values.
 #'
-#' @param control A list containing at least two functions:
+#' @param discConfig A list containing at least two functions:
 #'   \describe{
-#'     \item{simulateNewDataFun}{A function `function(thetaRow, control)` that simulates one
-#'       replicated dataset `y*` given one draws of the parameters}
+#'     \item{simulateNewDataFun}{A function
+#'       `function(thetaRow, control = NULL)` that simulates one replicated
+#'       dataset `y*` given a single posterior draw. The optional `control`
+#'       argument can be used to pass model-specific objects (e.g., a NIMBLE
+#'       model), but may be ignored if not needed.}
 #'     \item{discrepancy}{A function `function(data, thetaRow, ...)` that returns
-#'       the scalar discrepancy `D(data, θ)` for one draw.}
+#'       the scalar discrepancy `D(data, \eqn{\theta})` for one draw.}
 #'   }
 #'
-#' @return A function of the form `function(MCMCSamples, targetData, ...)`
-#'   that returns a list with two numeric vectors:
+#' @return A function of the form
+#'   `function(MCMCSamples, targetData, control = NULL, ...)` that returns a
+#'   list with two numeric vectors:
 #'   \itemize{
-#'     \item `obs`: discrepancies for the observed (replicate) data.
-#'     \item `sim`: discrepancies for the replicated data.
+#'     \item `obs`: discrepancies computed on `targetData`.
+#'     \item `sim`: discrepancies computed on posterior predictive replicates.
 #'   }
 #'
 #' @examples
 #' \dontrun{
-#' control <- list(
-#'   simulateNewDataFun = function(theta) rnorm(10, theta),
-#'   discrepancy  = function(data, theta) mean((data - theta)^2)
+#' discConfig <- list(
+#'   simulateNewDataFun = function(thetaRow, control = NULL) rnorm(10, thetaRow),
+#'   discrepancy  = function(data, thetaRow) mean((data - thetaRow)^2)
 #' )
-#' discFun <- makeOfflineDiscFun(control)
+#' discFun <- makeOfflineDiscFun(discConfig)
 #' }
 #'
 #' @export
 
-makeOfflineDiscFun <- function(control) {
-  function(MCMCSamples, targetData, ...) {
+makeOfflineDiscFun <- function(discConfig) {
+  function(MCMCSamples, targetData, control = NULL, ...) {
     ## Offline discrepancy calculator: compute D(data, theta) and D(y*, theta)
-    if (!is.list(control) || !all(c("simulateNewDataFun", "discrepancy") %in% names(control))) {
-      stop("control must be a list with elements 'simulateNewDataFun' and 'discrepancy'.")
+    if (!is.list(discConfig) || !all(c("simulateNewDataFun", "discrepancy") %in% names(discConfig))) {
+      stop("discConfig must be a list with elements 'simulateNewDataFun' and 'discrepancy'.")
     }
-    simulateNewDataFun <- control$simulateNewDataFun
-    discrepancy  <- control$discrepancy
+    simulateNewDataFun <- discConfig$simulateNewDataFun
+    discrepancy  <- discConfig$discrepancy
 
-    dObs <- apply(MCMCSamples, 1, function(thetaRow) discrepancy(targetData, thetaRow, ...))
+    dObs <- apply(MCMCSamples, 1, function(thetaRow)
+      discrepancy(targetData, thetaRow, ...)
+    )
+
     dSim <- apply(MCMCSamples, 1, function(thetaRow) {
       y <- simulateNewDataFun(thetaRow, control)
       discrepancy(y, thetaRow, ...)
     })
+
     list(obs = dObs, sim = dSim)
   }
 }
