@@ -29,6 +29,9 @@ runCalibrationNIMBLE <- function(
     control = list(),
     ...
 ) {
+
+  verbose <- isTRUE(control$verbose)
+
   ## 0. Data names and checks
   if (is.null(dataNames)) {
     dataNames <- model$getNodeNames(dataOnly = TRUE)
@@ -53,6 +56,12 @@ runCalibrationNIMBLE <- function(
     stop("Argument 'model' must be a nimbleModel or a compiled nimble model.")
   }
 
+  if (verbose) {
+    message("Data nodes: ", paste(dataNames, collapse = ", "))
+    message("Model class: ", paste(class(model), collapse = "/"))
+    message("Compiled model class: ", paste(class(cmodel), collapse = "/"))
+  }
+
   ## 1. Configure and compile MCMC for main chain
   if (is.null(mcmcConfFun)) {
     mcmcConfFun <- function(model) {
@@ -72,6 +81,19 @@ runCalibrationNIMBLE <- function(
   )
   MCMCSamples <- as.matrix(obsMCMC)
 
+  if (verbose) {
+    message("Main MCMC finished")
+    message("MCMCSamples dim: ", paste(dim(MCMCSamples), collapse = " x "))
+    message("MCMCSamples columns: ", paste(colnames(MCMCSamples), collapse = ", "))
+    message("paramNames: ", paste(paramNames, collapse = ", "))
+  }
+
+
+  if (!all(paramNames %in% colnames(MCMCSamples))) {
+    stop("paramNames missing from MCMCSamples: ",
+         paste(setdiff(paramNames, colnames(MCMCSamples)), collapse = ", "))
+  }
+
   ## Extract observed data from the model
   ## SP: need to think better if data is a vector/matrix/array - something else?
   observedData <- cmodel[[dataNames]]
@@ -90,6 +112,13 @@ runCalibrationNIMBLE <- function(
     as.matrix(repMCMC)
   }
 
+  if (verbose) {
+    message("modifint the control for runCalibration:")
+    message("  mcmc fields: ", paste(names(control$mcmc), collapse = ", "))
+    message("  disc fields: ", paste(names(control$disc), collapse = ", "))
+    message("  draw fields: ", paste(names(control$draw), collapse = ", "))
+  }
+
   defaultControl <- list(
     mcmc = MCMCcontrolRep,
     disc = list(
@@ -101,7 +130,12 @@ runCalibrationNIMBLE <- function(
   )
 
   control <- modifyList(defaultControl, control)
+
   ## 5. Call generic engine
+  if (verbose) {
+    message("Calling runCalibration() with nReps = ", nReps)
+  }
+
   runCalibration(
     MCMCSamples  = MCMCSamples,
     observedData = observedData,

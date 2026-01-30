@@ -53,7 +53,8 @@ asymm_disc <- function(data, thetaRow, control) {
 control <- list(
   model      = newcomb_model,
   dataNames  = dataNames,
-  paramNames = paramNames
+  paramNames = paramNames,
+  verbose    = TRUE
 )
 
 ## function that generates new data
@@ -62,10 +63,8 @@ newcombNewData <- function(thetaRow, control) {
   dataNames  <- control$dataNames
   paramNames <- control$paramNames
 
-  theta <- thetaRow[paramNames]
-
   for (nm in paramNames) {
-    model[[nm]] <- theta[[nm]]
+    model[[nm]] <- thetaRow[nm]
   }
 
   model$simulate(nodes = dataNames, includeData = TRUE)
@@ -111,7 +110,7 @@ resNewcomb <- runCalibrationNIMBLE(
   paramNames = paramNames,
   discFun = discFun,
   simulateNewDataFun = newcombNewData,
-  nReps = 100,
+  nReps = 10,
   MCMCcontrolMain = list(niter = 5000, nburnin = 1000, thin = 1),
   MCMCcontrolRep  = list(niter = 10,  nburnin = 0,    thin = 1),
   control = control

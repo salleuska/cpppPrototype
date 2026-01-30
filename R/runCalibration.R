@@ -55,6 +55,20 @@ runCalibration <- function(
   discControl <- if (!is.null(control$disc)) control$disc else control
   drawControl <- if (!is.null(control$draw)) control$draw else control
 
+  if (isTRUE(control$verbose)) {
+    message("runCalibration(): routing")
+    message("  names(control): ", paste(names(control), collapse = ", "))
+    message("  names(mcmcControl): ", paste(names(mcmcControl), collapse = ", "))
+    message("  names(discControl): ", paste(names(discControl), collapse = ", "))
+    message("  names(drawControl): ", paste(names(drawControl), collapse = ", "))
+  }
+
+  ## check messages
+  verbose <- isTRUE(control$verbose)
+  ## for parallel
+  # progressEvery <- control$progressEvery
+  # if (!is.null(progressEvery)) progressEvery <- as.integer(progressEvery)
+
   ##  Choose rows in MCMCSamples to simulate data for calibration
   if (is.null(drawIndexSelector)) {
     drawnIndices <- floor(seq(1, nDraws, length.out = nReps))
@@ -87,7 +101,8 @@ runCalibration <- function(
   repDiscList <- vector("list", nReps)
 
   for (r in seq_len(nReps)) {
-    thetaRow <- MCMCSamples[drawnIndices[r], , drop = FALSE]
+    ## extract one row named vector from MCMC samples
+    thetaRow <- MCMCSamples[drawnIndices[r], , drop = TRUE]
 
     # 3a. simulate a new dataset y^(r) from posterior predictive of the original model
     newData <- simulateNewDataFun(thetaRow = thetaRow,
