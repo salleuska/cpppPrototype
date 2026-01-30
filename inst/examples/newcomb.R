@@ -1,140 +1,94 @@
 ############################################################
-## Newcomb data example: NIMBLE + offline discrepancy + CPPP
+## Newcomb example in pure R (no NIMBLE)
+## Uses: runCalibration() + makeOfflineDiscFun() from cpppPrototype
 ############################################################
-
-## 1) Packages
-library(nimble)
 library(cpppPrototype)
 
-## 2) Data: Newcomb light-speed measurements
+## 1) Data
 lightPath <- system.file("examples", "light.txt", package = "cpppPrototype")
-newcombData <- list(y = read.table(lightPath)$V1)
 
-constants <- list(n = length(newcombData$y))
-
-
-## 3) NIMBLE model
-newcombCode <- nimbleCode({
-  for (i in 1:n) {
-    y[i] ~ dnorm(mu, sd = sigma)
-  }
-  mu ~ dflat()
-  log(sigma) ~ dflat()
-})
-
-
-inits <- list(mu = 0, log_sigma = 2)
-
-newcomb_model <- nimbleModel(
-  code      = newcombCode,
-  data      = newcombData,
-  inits     = inits,
-  constants = constants
-)
+yObs <- read.table(lightPath)$V1
+n <- length(yObs)
 
 dataNames  <- "y"
 paramNames <- c("mu", "sigma")
 
-## 4) Offline discrepancy
-## Discrepancy: data-only, min(y)
+## 2) Posterior sampler for Normal model with prior p(mu, sigma) ∝ 1/sigma
+## Returns matrix with columns mu, sigma (named), one row per draw.
+samplePosteriorNormalJeffreys <- function(y, nDraws) {
+  ybar <- mean(y)
+  s2   <- var(y)                 # sample variance with denominator (n-1)
+  df   <- length(y) - 1
 
-min_disc <- function(data, thetaRow, control) {
-  min(data)
+  ## sigma^2 | y ~ Inv-chi-square(df, s2)
+  sigma2 <- (df * s2) / stats::rchisq(nDraws, df = df)
+  sigma  <- sqrt(sigma2)
+
+  ## mu | sigma, y ~ Normal(ybar, sigma/sqrt(n))
+  mu <- stats::rnorm(nDraws, mean = ybar, sd = sigma / sqrt(length(y)))
+
+  out <- cbind(mu = mu, sigma = sigma)
+  out
 }
 
+## 3) MCMCFun: "short chain" on targetData (here: direct posterior sampling)
+## Signature matches runCalibration(): function(targetData, control)
+MCMCFun <- function(targetData, control) {
+  nDraws <- control$nDraws
+  samplePosteriorNormalJeffreys(targetData, nDraws = nDraws)
+}
 
-## asymmetry discrepancy using R
-asymm_disc <- function(data, thetaRow, control) {
-  mu <- thetaRow["mu"]
+## 4) simulateNewDataFun: posterior predictive simulator given one draw thetaRow
+## Signature: function(thetaRow, control) where thetaRow is named vector
+simulateNewDataFun <- function(thetaRow, control) {
+  n <- control$n
+  mu <- unname(thetaRow["mu"])
+  sigma <- unname(thetaRow["sigma"])
+  rnorm(n, mean = mu, sd = sigma)
+}
+
+## 5) Discrepancy (same structure as your asymmetry example)
+asymmDisc <- function(data, thetaRow, control) {
+  mu <- unname(thetaRow["mu"])
   dataSorted <- sort(data)
   abs(dataSorted[61] - mu) - abs(dataSorted[6] - mu)
 }
 
-control <- list(
-  model      = newcomb_model,
-  dataNames  = dataNames,
-  paramNames = paramNames,
-  verbose    = TRUE
-)
-
-## function that generates new data
-newcombNewData <- function(thetaRow, control) {
-  model      <- control$model
-  dataNames  <- control$dataNames
-  paramNames <- control$paramNames
-
-  for (nm in paramNames) {
-    model[[nm]] <- thetaRow[nm]
-  }
-
-  model$simulate(nodes = dataNames, includeData = TRUE)
-  model[[dataNames]]
-}
-
-##########################################
-# 0) Run MCMC
-samples <- nimbleMCMC(
-  newcomb_model,
-  niter   = 5000,
-  nburnin = 1000,
-  monitors = paramNames
-)
-MCMCSamples <- as.matrix(samples)
-head(MCMCSamples)
-
-##  Check simulation
-# control <- list(
-#   model      = newcomb_model,
-#   dataNames  = dataNames,
-#   paramNames = paramNames
-# )
-#
-# theta1 <- MCMCSamples[1, , drop = TRUE]
-# ySim1 <- newcombNewData(thetaRow = theta1, control = control)
-#
-# str(ySim1)
-# length(ySim1)
-########################################################
-## Build disc_fun via the package helper
-
+## 6) Build offline discFun using package helper
 discConfig <- list(
-  simulateNewDataFun = newcombNewData,
-  discrepancy        = asymm_disc
+  simulateNewDataFun = simulateNewDataFun,
+  discrepancy        = asymmDisc
 )
-
 discFun <- makeOfflineDiscFun(discConfig)
-set.seed(1)
-resNewcomb <- runCalibrationNIMBLE(
-  model = newcomb_model,
-  dataNames = dataNames,
-  paramNames = paramNames,
-  discFun = discFun,
-  simulateNewDataFun = newcombNewData,
-  nReps = 10,
-  MCMCcontrolMain = list(niter = 5000, nburnin = 1000, thin = 1),
-  MCMCcontrolRep  = list(niter = 10,  nburnin = 0,    thin = 1),
-  control = control
+
+## 7) Run generic calibration
+## Use structured control so routing is exercised:
+control <- list(
+  verbose = TRUE,
+  mcmc = list(nDraws = 100),    # size of each posterior sample used in discFun + refits
+  disc = list(n = n)            # used by simulateNewDataFun + discrepancy (if needed)
 )
 
-print(resNewcomb$CPPP)
-print(resNewcomb$repPPP)
+set.seed(1)
 
+## main posterior draws from observed data
+MCMCSamples <- samplePosteriorNormalJeffreys(yObs, nDraws = control$mcmc$nDraws)
 
-# obsDisc <- res_newcomb$discrepancies$obs
-# plot(obsDisc$obs, obsDisc$sim)
-# abline()
-############################
+res <- runCalibration(
+  MCMCSamples        = MCMCSamples,
+  observedData       = yObs,
+  MCMCFun            = MCMCFun,
+  simulateNewDataFun = simulateNewDataFun,
+  discFun            = discFun,
+  nReps              = 10,
+  drawIndexSelector  = NULL,
+  control            = control
+)
 
-#
-# ##  Check discFun on the original (real) data
-# disc <- discFun(
-#   MCMCSamples = MCMCSamples,
-#   targetData  = newcombData$y,
-#   control     = control
-# )
-# plot(disc$obs, disc$sim,
-#      xlab = "D(y, θ)",
-#      ylab = "D(y*, θ)")
-# abline(0, 1)
-#
-# mean(disc$sim >= disc$obs)
+print(res$CPPP)
+print(res$repPPP)
+print(res$obsPPP)
+
+## Optional quick look at observed discrepancies
+## obsDisc <- res$discrepancies$obs
+## plot(obsDisc$obs, obsDisc$sim); abline(0,1)

@@ -112,7 +112,7 @@ resNewcomb <- runCalibrationNIMBLE(
   simulateNewDataFun = newcombNewData,
   nReps = 10,
   MCMCcontrolMain = list(niter = 5000, nburnin = 1000, thin = 1),
-  MCMCcontrolRep  = list(niter = 10,  nburnin = 0,    thin = 1),
+  MCMCcontrolRep  = list(niter = 100,  nburnin = 0,    thin = 1),
   control = control
 )
 
