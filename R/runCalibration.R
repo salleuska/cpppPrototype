@@ -68,6 +68,8 @@
 #'       \describe{
 #'         \item{workers}{Integer number of PSOCK workers. Default is 1 (serial).}
 #'         \item{seed}{Optional integer seed for reproducible parallel RNG.}
+#'         \item{export}{Optional character vector of object names (e.g. helper functions) to export to workers.}
+#'         \item{packages}{Optional character vector of packages to load on workers.}
 #'       }}
 #'   }
 #'
@@ -217,18 +219,37 @@ runCalibration <- function(
     cl <- parallel::makeCluster(workers)
     on.exit(parallel::stopCluster(cl), add = TRUE)
 
-    ## ensure package namespace is available on workers
-    ## (not strictly required if functions are exported by clusterExport,
-    ## but safe if discFun etc call package internals)
-    ## SP: may need
-    ## parallel::clusterEvalQ(cl, library(cpppPrototype))
-    parallel::clusterEvalQ(cl, NULL)
+    ## ---- PSOCK setup: load packages and export extra objects  ----
+    parallelControl <- if (is.list(parallelControl)) parallelControl else list()
+
+    pkgsToLoad <- parallelControl$packages
+    if (!is.null(pkgsToLoad)) {
+      pkgsToLoad <- as.character(pkgsToLoad)
+      parallel::clusterEvalQ(cl, {
+        for (p in pkgsToLoad) {
+          if (!require(p, character.only = TRUE)) {
+            stop(sprintf("Failed to load package '%s' on worker.", p))
+          }
+        }
+        NULL
+      })
+    }
+
+    extraExport <- parallelControl$export
+    if (!is.null(extraExport)) {
+      extraExport <- as.character(extraExport)
+    } else {
+      extraExport <- character(0)
+    }
 
     ## export everything the workers need
     parallel::clusterExport(
       cl,
-      varlist = c("repSeeds", "discControl", "mcmcControl",
-                  "simulateNewDataFun", "MCMCFun", "discFun", "runOneRep"),
+      varlist = unique(c(
+        "repSeeds", "discControl", "mcmcControl",
+        "simulateNewDataFun", "MCMCFun", "discFun", "runOneRep",
+        extraExport
+      )),
       envir = environment()
     )
 

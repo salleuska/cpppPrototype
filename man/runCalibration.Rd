@@ -74,6 +74,8 @@ replicated calibration worlds. Supported fields:
 \describe{
 \item{workers}{Integer number of PSOCK workers. Default is 1 (serial).}
 \item{seed}{Optional integer seed for reproducible parallel RNG.}
+\item{export}{Optional character vector of object names (e.g. helper functions) to export to workers.}
+\item{packages}{Optional character vector of packages to load on workers.}
 }}
 }}
 
