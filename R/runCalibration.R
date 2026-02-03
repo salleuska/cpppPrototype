@@ -4,35 +4,93 @@
 
 #' Run posterior predictive calibration
 #'
-#' @param MCMCSamples Matrix of posterior draws from the observed-data fit.
-#' @param observedData Observed dataset (any R object).
-#' @param MCMCFun Function `function(targetData, control)` that runs a short MCMC conditional on `targetData`and returns posterior samples. `targetData` is the dataset treated as observed for the MCMC run.
-#' @param simulateNewDataFun Function `function(thetaRow, control)` that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.
-#' @param discFun Function `function(MCMCSamples, targetData, control)` that returns a list with components `obs` and `sim`, each a numeric vector over posterior draws. `targetData` is the dataset treated as observed for the discrepancy calculation.
-#' @param nReps Number of calibration replications.
-#' @param drawIndexSelector Optional function `function(MCMCSamples, nReps, control)`
-#'   returning the indices of rows to use as seeds for calibration.
-#' @param control Optional list of specific arguments passed to the
-#'   components used by `runCalibration()`. For convenience, `control` may be
-#'   a flat list, in which case it is passed unchanged to all components.
+#' Computes a calibrated posterior predictive p-value (CPPP) using
+#' posterior predictive checks and replicated calibration worlds.
 #'
-#'   Alternatively, `control` may be a structured list with named sublists,
-#'   which are routed to different stages of the calibration:
+#' The function is backend-agnostic: model fitting, data simulation,
+#' and discrepancy evaluation are provided by user-supplied functions.
+#'
+#' @param MCMCSamples Matrix of posterior draws from the observed-data fit.
+#'   Each row corresponds to one posterior draw of the model parameters.
+#'
+#' @param observedData Observed dataset. This dataset is treated
+#'   as the conditioning data for the initial discrepancy calculation.
+#'
+#' @param MCMCFun Function defined as
+#'   `function(targetData, control)` that runs an MCMC algorithm conditional on
+#'   `targetData` and returns posterior samples as a matrix.
+#'
+#' @param simulateNewDataFun Function defined as
+#'   `function(thetaRow, control)` that simulates one replicated dataset
+#'   from the posterior predictive distribution given a single posterior
+#'   draw `thetaRow`.
+#'
+#'
+#' @param discFun Discrepancy extractor with signature
+#'   `function(MCMCSamples, targetData, control)` returning a list with
+#'   components `obs` and `sim`, each a numeric vector (one value per row of
+#'   `MCMCSamples`).
+#'
+#'   In typical use, `discFun` is created by one of the package helpers:
 #'   \describe{
-#'     \item{mcmc}{Arguments or objects passed to `MCMCFun`, typically used
-#'       to control short MCMC runs in replicated calibration worlds.}
-#'     \item{disc}{Arguments or objects passed to `simulateNewDataFun` and
-#'       `discFun`, typically used for data simulation and discrepancy
-#'       calculation (e.g., model objects, node names).}
-#'     \item{draw}{Arguments passed to `drawIndexSelector`, if provided.}
+#'     \item{\code{makeOfflineDiscFun()}}{Computes discrepancies by evaluating a
+#'       user-specified discrepancy \eqn{D(data, \theta)} on `targetData` and on
+#'       posterior predictive replicates simulated for each posterior draw.}
+#'     \item{\code{makeColDiscFun()}}{Extracts precomputed discrepancy columns
+#'       from `MCMCSamples` (online mode), returning them as `obs` and `sim`.}
 #'   }
 #'
-#'   This structure allows backend-specific state (such as NIMBLE models
-#'   and compiled MCMC objects) to be cleanly separated while remaining
-#'   backward compatible with simpler uses.#' @param ... Not used currently.
+#'   Custom `discFun` functions are also supported, as long as the return value
+#'   has named components `obs` and `sim` of equal length.
 #'
-#' @return a list (future `S3` class `cpppResult` objects) containing the CPPP, observed and replicated repPPP, observed discrepancies and replicated discrepancies.
+#' @param nReps Integer. Number of calibration replicates.
+#'
+#' @param drawIndexSelector Optional function
+#'   `function(MCMCSamples, nReps, control)` returning a vector of row indices
+#'   selecting which posterior draws are used as seeds for calibration worlds.
+#'   If `NULL`, indices are chosen evenly over the posterior sample.
+#'
+#' @param control Optional list of arguments passed to components used by
+#'   `runCalibration()`.
+#'
+#'   For convenience, `control` may be a flat list, in which case it is passed
+#'   unchanged to all components.
+#'
+#'   Alternatively, `control` may be a structured list with named sublists:
+#'   \describe{
+#'     \item{mcmc}{Arguments passed to `MCMCFun`, typically controlling short
+#'       MCMC runs in replicated calibration worlds (e.g., `niter`, `nburnin`).}
+#'     \item{disc}{Arguments passed to `simulateNewDataFun` and `discFun`,
+#'       typically including model objects, data node names, or parameter names.}
+#'     \item{draw}{Arguments passed to `drawIndexSelector`, if provided.}
+#'     \item{parallel}{Optional list controlling parallel execution of
+#'       replicated calibration worlds. Supported fields:
+#'       \describe{
+#'         \item{workers}{Integer number of PSOCK workers. Default is 1 (serial).}
+#'         \item{seed}{Optional integer seed for reproducible parallel RNG.}
+#'       }}
+#'   }
+#'
+#' @param ... Not used currently.
+#'
+#' @return An object of class `cpppResult` containing:
+#'   \describe{
+#'     \item{CPPP}{Calibrated posterior predictive p-value.}
+#'     \item{obsPPP}{Posterior predictive p-value for the observed data.}
+#'     \item{repPPP}{Vector of posterior predictive p-values for each
+#'       calibration world.}
+#'     \item{discrepancies}{List containing observed and replicated discrepancies.}
+#'     \item{drawnIndices}{Indices of posterior draws used as calibration seeds.}
+#'   }
+#'
+#' @details
+#' Calibration replicates are conditionally independent given the
+#' posterior sample and may be executed in parallel using PSOCK clusters.
+#' Objects referenced by `MCMCFun`, `discFun`, and `simulateNewDataFun` must
+#' be serializable and available on worker processes.
+#'
 #' @export
+#'
 
 runCalibration <- function(
     MCMCSamples,
@@ -45,6 +103,8 @@ runCalibration <- function(
     control = list(),
     ...
 ) {
+
+  ## 1. Setup and checks
 
   MCMCSamples <- as.matrix(MCMCSamples)
   nDraws      <- nrow(MCMCSamples)
@@ -65,9 +125,6 @@ runCalibration <- function(
 
   ## check messages
   verbose <- isTRUE(control$verbose)
-  ## for parallel
-  # progressEvery <- control$progressEvery
-  # if (!is.null(progressEvery)) progressEvery <- as.integer(progressEvery)
 
   ##  Choose rows in MCMCSamples to simulate data for calibration
   if (is.null(drawIndexSelector)) {
@@ -78,6 +135,18 @@ runCalibration <- function(
   if (length(drawnIndices) != nReps) {
     stop("drawIndexSelector must return exactly nReps indices.")
   }
+
+  ## Set up parallelization
+  parallelControl <- control$parallel
+  workers <- if (is.list(parallelControl) && !is.null(parallelControl$workers)) {
+    as.integer(parallelControl$workers)
+  } else 1L
+
+  seed <- if (is.list(parallelControl)) parallelControl$seed else NULL
+  useParallel <- !is.na(workers) && workers > 1L
+
+  ## Define all the rows of original MCMC (replication "seeds") that will be used to generate new replicates
+  repSeeds <- MCMCSamples[drawnIndices, , drop = FALSE]
 
   ## 2. Discrepancies + PPP for the observed data
   obsDisc <- discFun(MCMCSamples  = MCMCSamples,
@@ -100,9 +169,10 @@ runCalibration <- function(
   repPPP <- numeric(nReps)
   repDiscList <- vector("list", nReps)
 
-  for (r in seq_len(nReps)) {
+  ## function that run one replicate
+  runOneRep <- function(r) {
     ## extract one row named vector from MCMC samples
-    thetaRow <- MCMCSamples[drawnIndices[r], , drop = TRUE]
+    thetaRow <- repSeeds[r, , drop = TRUE]
 
     # 3a. simulate a new dataset y^(r) from posterior predictive of the original model
     newData <- simulateNewDataFun(thetaRow = thetaRow,
@@ -126,9 +196,50 @@ runCalibration <- function(
       stop("'obs' and 'sim' must have the same length in each calibration world.")
     }
 
-    repPPP[r]         <- mean(repSimDisc >= repObsDisc)
-    repDiscList[[r]] <- repDisc
+    list(
+      ppp  = mean(repSimDisc >= repObsDisc),
+      disc = repDisc
+    )
 
+  }
+
+  ## PARALLELIZATION
+  if (!useParallel) {
+
+    for (r in seq_len(nReps)) {
+      out <- runOneRep(r)
+      repPPP[r] <- out$ppp
+      repDiscList[[r]] <- out$disc
+    }
+
+  } else {
+
+    cl <- parallel::makeCluster(workers)
+    on.exit(parallel::stopCluster(cl), add = TRUE)
+
+    ## ensure package namespace is available on workers
+    ## (not strictly required if functions are exported by clusterExport,
+    ## but safe if discFun etc call package internals)
+    ## SP: may need
+    ## parallel::clusterEvalQ(cl, library(cpppPrototype))
+    parallel::clusterEvalQ(cl, NULL)
+
+    ## export everything the workers need
+    parallel::clusterExport(
+      cl,
+      varlist = c("repSeeds", "discControl", "mcmcControl",
+                  "simulateNewDataFun", "MCMCFun", "discFun", "runOneRep"),
+      envir = environment()
+    )
+
+    if (!is.null(seed)) {
+      parallel::clusterSetRNGStream(cl, iseed = seed)
+    }
+
+    outs <- parallel::parLapply(cl, X = seq_len(nReps), fun = runOneRep)
+
+    repPPP <- vapply(outs, function(z) z$ppp, numeric(1))
+    repDiscList <- lapply(outs, function(z) z$disc)
   }
 
   ## 4. CPPP: how extreme obsPPP is under the calibration distribution

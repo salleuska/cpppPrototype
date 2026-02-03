@@ -14,7 +14,7 @@ runCalibrationNIMBLE(
   MCMCcontrolMain = list(niter = 5000, nburnin = 1000, thin = 1),
   MCMCcontrolRep = list(niter = 500, nburnin = 0, thin = 1),
   mcmcConfFun = NULL,
-  drawIndices = NULL,
+  drawIndexSelector = NULL,
   control = list(),
   ...
 )
@@ -27,7 +27,7 @@ nodes flagged as data in the model are used.}
 
 \item{paramNames}{Character vector of parameter node names to monitor. (SP: if NULL some default?)}
 
-\item{discFun}{Function \verb{function(MCMCSamples, newData, control)} that returns \code{list(obs, sim)} with one discrepancy value per posterior draw of \code{MCMCSamples}.}
+\item{discFun}{Function \verb{function(MCMCSamples, targetData, control)} that returns \code{list(obs, sim)} with one discrepancy value per posterior draw of \code{MCMCSamples}.}
 
 \item{simulateNewDataFun}{Function \verb{function(thetaRow, control)} that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.}
 
@@ -39,7 +39,7 @@ nodes flagged as data in the model are used.}
 
 \item{mcmcConfFun}{Optional function \verb{function(model)} returning an MCMC configuration.}
 
-\item{drawIndices}{Optional row selector (see runCalibration()).}
+\item{drawIndexSelector}{Optional row selector (see runCalibration()).}
 
 \item{control}{List of additional options passed to discrepancy / helpers.}
 
