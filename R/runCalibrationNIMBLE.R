@@ -4,6 +4,10 @@
 #' @param dataNames Optional character vector of data node names. If NULL,
 #'   nodes flagged as data in the model are used.
 #' @param paramNames Character vector of parameter node names to monitor. (SP: if NULL some default?)
+#' @param MCMCSamples Optional matrix of posterior draws from the observed-data fit.
+#'   If provided, `runCalibrationNIMBLE()` skips the main MCMC run and uses these
+#'   draws as the posterior sample input to `runCalibration()`. The matrix must
+#'   contain columns named by `paramNames`.
 #' @param discFun Function `function(MCMCSamples, targetData, control)` that returns `list(obs, sim)` with one discrepancy value per posterior draw of `MCMCSamples`.
 #' @param simulateNewDataFun Function `function(thetaRow, control)` that  simulates one replicated dataset from the posterior predictive. SP: We assume that new data is sampled from the posterior predictive of the model. In principle we may want to consider sampling from the prior predictive.
 #' @param nReps Number of calibration replications.
@@ -19,6 +23,7 @@ runCalibrationNIMBLE <- function(
     model,
     dataNames    = NULL,
     paramNames,
+    MCMCSamples  = NULL,
     discFun,
     simulateNewDataFun,
     nReps       = 100,
@@ -62,36 +67,64 @@ runCalibrationNIMBLE <- function(
     message("Compiled model class: ", paste(class(cmodel), collapse = "/"))
   }
 
-  ## 1. Configure and compile MCMC for main chain
-  if (is.null(mcmcConfFun)) {
-    mcmcConfFun <- function(model) {
-      configureMCMC(model, monitors = paramNames, print = FALSE)
+  ## 1. Obtain posterior draws from observed data (either run MCMC or use user-supplied samples)
+  if (is.null(MCMCSamples)) {
+
+    ## Configure and compile MCMC for main chain
+    if (is.null(mcmcConfFun)) {
+      mcmcConfFun <- function(model) {
+        configureMCMC(model, monitors = paramNames, print = FALSE)
+      }
+    }
+    mcmcConf       <- mcmcConfFun(model)
+    mcmcUncompiled <- buildMCMC(mcmcConf)
+    cmcmc          <- compileNimble(mcmcUncompiled, project = model, resetFunctions = TRUE)
+
+    ## Run main chain on observed data
+    obsMCMC <- runMCMC(
+      cmcmc,
+      niter   = MCMCcontrolMain$niter,
+      nburnin = MCMCcontrolMain$nburnin,
+      thin    = MCMCcontrolMain$thin
+    )
+    MCMCSamples <- as.matrix(obsMCMC)
+
+    if (verbose) {
+      message("Main MCMC finished")
+      message("MCMCSamples dim: ", paste(dim(MCMCSamples), collapse = " x "))
+      message("MCMCSamples columns: ", paste(colnames(MCMCSamples), collapse = ", "))
+      message("paramNames: ", paste(paramNames, collapse = ", "))
+    }
+
+  } else {
+
+    ## User supplied posterior draws
+    MCMCSamples <- as.matrix(MCMCSamples)
+
+    if (verbose) {
+      message("Using user-supplied MCMCSamples")
+      message("MCMCSamples dim: ", paste(dim(MCMCSamples), collapse = " x "))
+      message("MCMCSamples columns: ", paste(colnames(MCMCSamples), collapse = ", "))
+      message("paramNames: ", paste(paramNames, collapse = ", "))
     }
   }
-  mcmcConf       <- mcmcConfFun(model)
-  mcmcUncompiled <- buildMCMC(mcmcConf)
-  cmcmc          <- compileNimble(mcmcUncompiled, project = model, resetFunctions = TRUE)
 
-  ## 2. Run main chain on observed data
-  obsMCMC <- runMCMC(
-    cmcmc,
-    niter   = MCMCcontrolMain$niter,
-    nburnin = MCMCcontrolMain$nburnin,
-    thin    = MCMCcontrolMain$thin
-  )
-  MCMCSamples <- as.matrix(obsMCMC)
-
-  if (verbose) {
-    message("Main MCMC finished")
-    message("MCMCSamples dim: ", paste(dim(MCMCSamples), collapse = " x "))
-    message("MCMCSamples columns: ", paste(colnames(MCMCSamples), collapse = ", "))
-    message("paramNames: ", paste(paramNames, collapse = ", "))
-  }
-
-
+  ## Validate samples contain required params
   if (!all(paramNames %in% colnames(MCMCSamples))) {
     stop("paramNames missing from MCMCSamples: ",
          paste(setdiff(paramNames, colnames(MCMCSamples)), collapse = ", "))
+  }
+
+  ## Ensure we have a compiled MCMC object for replicated calibration runs
+  if (!exists("cmcmc", inherits = FALSE)) {
+    if (is.null(mcmcConfFun)) {
+      mcmcConfFun <- function(model) {
+        configureMCMC(model, monitors = paramNames, print = FALSE)
+      }
+    }
+    mcmcConf       <- mcmcConfFun(model)
+    mcmcUncompiled <- buildMCMC(mcmcConf)
+    cmcmc          <- compileNimble(mcmcUncompiled, project = model, resetFunctions = TRUE)
   }
 
   ## Extract observed data from the model

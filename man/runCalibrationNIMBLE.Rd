@@ -8,6 +8,7 @@ runCalibrationNIMBLE(
   model,
   dataNames = NULL,
   paramNames,
+  MCMCSamples = NULL,
   discFun,
   simulateNewDataFun,
   nReps = 100,
@@ -26,6 +27,11 @@ runCalibrationNIMBLE(
 nodes flagged as data in the model are used.}
 
 \item{paramNames}{Character vector of parameter node names to monitor. (SP: if NULL some default?)}
+
+\item{MCMCSamples}{Optional matrix of posterior draws from the observed-data fit.
+If provided, \code{runCalibrationNIMBLE()} skips the main MCMC run and uses these
+draws as the posterior sample input to \code{runCalibration()}. The matrix must
+contain columns named by \code{paramNames}.}
 
 \item{discFun}{Function \verb{function(MCMCSamples, targetData, control)} that returns \code{list(obs, sim)} with one discrepancy value per posterior draw of \code{MCMCSamples}.}
 

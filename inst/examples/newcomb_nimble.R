@@ -104,8 +104,9 @@ discConfig <- list(
 
 discFun <- makeOfflineDiscFun(discConfig)
 set.seed(1)
+
 resNewcomb <- runCalibrationNIMBLE(
-  model = newcomb_model,
+  model = newcomb_model$newModel(),
   dataNames = dataNames,
   paramNames = paramNames,
   discFun = discFun,
@@ -119,6 +120,24 @@ resNewcomb <- runCalibrationNIMBLE(
 print(resNewcomb$CPPP)
 print(resNewcomb$repPPP)
 
+
+#####################
+### check providing the MCMC chain first
+
+resNewcomb <- runCalibrationNIMBLE(
+  model = newcomb_model$newModel(),
+  dataNames = dataNames,
+  paramNames = paramNames,
+  MCMCSamples = MCMCSamples,
+  discFun = discFun,
+  simulateNewDataFun = newcombNewData,
+  nReps = 10,
+  MCMCcontrolRep  = list(niter = 100,  nburnin = 0,    thin = 1),
+  control = control
+)
+
+print(resNewcomb$CPPP)
+print(resNewcomb$repPPP)
 
 # obsDisc <- res_newcomb$discrepancies$obs
 # plot(obsDisc$obs, obsDisc$sim)
