@@ -32,9 +32,24 @@ runCalibration(
 \item{drawIndexSelector}{Optional function \verb{function(MCMCSamples, nReps, control)}
 returning the indices of rows to use as seeds for calibration.}
 
-\item{control}{List of additional backend-specific arguments.}
+\item{control}{Optional list of specific arguments passed to the
+components used by \code{runCalibration()}. For convenience, \code{control} may be
+a flat list, in which case it is passed unchanged to all components.
 
-\item{...}{Not used currently.}
+Alternatively, \code{control} may be a structured list with named sublists,
+which are routed to different stages of the calibration:
+\describe{
+\item{mcmc}{Arguments or objects passed to \code{MCMCFun}, typically used
+to control short MCMC runs in replicated calibration worlds.}
+\item{disc}{Arguments or objects passed to \code{simulateNewDataFun} and
+\code{discFun}, typically used for data simulation and discrepancy
+calculation (e.g., model objects, node names).}
+\item{draw}{Arguments passed to \code{drawIndexSelector}, if provided.}
+}
+
+This structure allows backend-specific state (such as NIMBLE models
+and compiled MCMC objects) to be cleanly separated while remaining
+backward compatible with simpler uses.#' @param ... Not used currently.}
 }
 \value{
 a list (future \code{S3} class \code{cpppResult} objects) containing the CPPP, observed and replicated repPPP, observed discrepancies and replicated discrepancies.

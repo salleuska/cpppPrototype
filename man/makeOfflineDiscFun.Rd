@@ -4,23 +4,27 @@
 \alias{makeOfflineDiscFun}
 \title{Make offline discrepancy function}
 \usage{
-makeOfflineDiscFun(control)
+makeOfflineDiscFun(discConfig)
 }
 \arguments{
-\item{control}{A list containing at least two functions:
+\item{discConfig}{A list containing at least two functions:
 \describe{
-\item{simulateNewDataFun}{A function \verb{function(thetaRow, control)} that simulates one
-replicated dataset \verb{y*} given one draws of the parameters}
+\item{simulateNewDataFun}{A function
+\verb{function(thetaRow, control = NULL)} that simulates one replicated
+dataset \verb{y*} given a single posterior draw. The optional \code{control}
+argument can be used to pass model-specific objects (e.g., a NIMBLE
+model), but may be ignored if not needed.}
 \item{discrepancy}{A function \verb{function(data, thetaRow, ...)} that returns
-the scalar discrepancy \code{D(data, θ)} for one draw.}
+the scalar discrepancy \verb{D(data, \eqn{\theta})} for one draw.}
 }}
 }
 \value{
-A function of the form \verb{function(MCMCSamples, targetData, ...)}
-that returns a list with two numeric vectors:
+A function of the form
+\verb{function(MCMCSamples, targetData, control = NULL, ...)} that returns a
+list with two numeric vectors:
 \itemize{
-\item \code{obs}: discrepancies for the observed (replicate) data.
-\item \code{sim}: discrepancies for the replicated data.
+\item \code{obs}: discrepancies computed on \code{targetData}.
+\item \code{sim}: discrepancies computed on posterior predictive replicates.
 }
 }
 \description{
@@ -33,16 +37,16 @@ The returned function evaluates discrepancies conditional on \code{targetData},
 which may be the original observed dataset or a replicated dataset from a
 calibration world. It expects posterior samples (\code{MCMCSamples}) and the
 corresponding \code{targetData}, and uses the model-specific functions in
-\code{control} to generate posterior predictive replicates and compute the
+\code{discConfig} to generate posterior predictive replicates and compute the
 discrepancy values.
 }
 \examples{
 \dontrun{
-control <- list(
-  simulateNewDataFun = function(theta) rnorm(10, theta),
-  discrepancy  = function(data, theta) mean((data - theta)^2)
+discConfig <- list(
+  simulateNewDataFun = function(thetaRow, control = NULL) rnorm(10, thetaRow),
+  discrepancy  = function(data, thetaRow) mean((data - thetaRow)^2)
 )
-discFun <- makeOfflineDiscFun(control)
+discFun <- makeOfflineDiscFun(discConfig)
 }
 
 }
