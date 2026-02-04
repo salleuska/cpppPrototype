@@ -250,8 +250,14 @@ runCalibration <- function(
         "simulateNewDataFun", "MCMCFun", "discFun", "runOneRep",
         extraExport
       )),
-      envir = environment()
+      envir = parent.frame()
     )
+
+    ## To make runCalibrationNIMBLE work
+    ## one-time worker initialization (optional)
+    if (is.list(parallelControl) && is.function(parallelControl$init)) {
+      parallel::clusterCall(cl, parallelControl$init)
+    }
 
     if (!is.null(seed)) {
       parallel::clusterSetRNGStream(cl, iseed = seed)
