@@ -259,6 +259,9 @@ runCalibration <- function(
       parallel::clusterCall(cl, parallelControl$init)
     }
 
+    ok <- unlist(parallel::clusterEvalQ(cl, exists("workerCtx", envir = .GlobalEnv)))
+    if (!all(ok)) stop("PSOCK init ran, but workerCtx was not created on all workers.")
+
     if (!is.null(seed)) {
       parallel::clusterSetRNGStream(cl, iseed = seed)
     }

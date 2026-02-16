@@ -206,26 +206,27 @@ runCalibrationNIMBLE <- function(
 
     ## function to initialize each worker: make a worker-local compiled context
     control$parallel$init <- function() {
-      ## worker-local cache variable
-      workerCtx <- new.env(parent = emptyenv())
+      tryCatch({
+        workerCtx <- new.env(parent = emptyenv())
+        workerCtx$repModel  <- rModel$newModel(replicate = TRUE)
+        workerCtx$cRepModel <- nimble::compileNimble(workerCtx$repModel)
 
-      ## copy model and compile
-      workerCtx$repModel  <- rModel$newModel(replicate = TRUE)
-      workerCtx$cRepModel <- nimble::compileNimble(workerCtx$repModel)
+        conf <- if (is.null(mcmcConfFun)) {
+          nimble::configureMCMC(workerCtx$repModel, monitors = paramNames, print = FALSE)
+        } else {
+          mcmcConfFun(workerCtx$repModel)
+        }
+        mcmcUncompiled <- nimble::buildMCMC(conf)
+        workerCtx$cRepMCMC <- nimble::compileNimble(mcmcUncompiled, project = workerCtx$repModel, resetFunctions = TRUE)
 
-      ## build + compile replicated MCMC
-      if (is.null(mcmcConfFun)) {
-        conf <- nimble::configureMCMC(workerCtx$repModel, monitors = paramNames, print = FALSE)
-      } else {
-        conf <- mcmcConfFun(workerCtx$repModel)
-      }
-      mcmcUncompiled <- nimble::buildMCMC(conf)
-      workerCtx$cRepMCMC <- nimble::compileNimble(mcmcUncompiled, project = workerCtx$repModel, resetFunctions = TRUE)
-
-      ## save into worker global env
-      assign("workerCtx", workerCtx, envir = .GlobalEnv)
-      NULL
+        assign("workerCtx", workerCtx, envir = .GlobalEnv)
+        TRUE
+      }, error = function(e) {
+        assign("workerCtx_init_error", conditionMessage(e), envir = .GlobalEnv)
+        FALSE
+      })
     }
+
   }
 
   ##### MCMFun
