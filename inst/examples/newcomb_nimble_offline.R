@@ -1,16 +1,9 @@
 ############################################################
-## Newcomb data example: NIMBLE + online discrepancy + CPPP
+## Newcomb data example: NIMBLE + offline discrepancy + CPPP
 ############################################################
-# Install a dev version alongside nimble using another folder
-# library(devtools)
-
-# install_github("nimble-dev/nimble",
-# 	subdir = "packages/nimble", #subdir
-# 	ref = "derived_discrepancy",   #branch
-# 	lib = "/opt/homebrew/Cellar/r/4.5.2/dev/") #local library
 
 ## 1) Packages
-library(nimble, lib.loc="/opt/homebrew/Cellar/r/4.5.2/dev")
+library(nimble)
 library(cppp)
 
 ## 2) Data: Newcomb light-speed measurements
@@ -86,6 +79,7 @@ samples <- nimbleMCMC(
   nburnin = 1000,
   monitors = paramNames
 )
+str(samples)
 MCMCSamples <- as.matrix(samples)
 head(MCMCSamples)
 

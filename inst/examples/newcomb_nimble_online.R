@@ -1,9 +1,19 @@
 ############################################################
-## Newcomb data example: NIMBLE + offline discrepancy + CPPP
+## Newcomb data example: NIMBLE + online discrepancy + CPPP
 ############################################################
+# Install a dev version alongside nimble using another folder
+# library(devtools)
+
+## If I want to install alomgside nimble I can use a specific path
+## and load from there
+
+# install_github("nimble-dev/nimble",
+# 	subdir = "packages/nimble", #subdir
+# 	ref = "derived_discrepancy",   #branch
+# 	lib = "/opt/homebrew/Cellar/r/4.5.2_1/dev") #path to folder
 
 ## 1) Packages
-library(nimble)
+library(nimble, lib.loc="/opt/homebrew/Cellar/r/4.5.2_1/dev")
 library(cppp)
 
 ## 2) Data: Newcomb light-speed measurements
@@ -35,20 +45,32 @@ newcomb_model <- nimbleModel(
 dataNames  <- "y"
 paramNames <- c("mu", "sigma")
 
-## 4) Offline discrepancy
+## 4) online discrepancy
 ## Discrepancy: data-only, min(y)
+## written using a nimble function
 
-min_disc <- function(data, thetaRow, control) {
-  min(data)
-}
+nfDef <- nimbleFunction(
+  setup = TRUE,
+  run = function(y = double(1)) {
+    diff <- min(y)
+    returnType(double())
+    return(diff)
+  }
+)
 
+Rnf <- nfDef()
+conf <- configureMCMC(newcomb_model, monitors = paramNames)
+conf$addDerivedQuantity(derived_discrepancy,
+                        control = list(simNodes = 'y', discrepancyFunction = Rnf))
+conf$printDerivedQuantities()
 
-## asymmetry discrepancy using R
-asymm_disc <- function(data, thetaRow, control) {
-  mu <- thetaRow["mu"]
-  dataSorted <- sort(data)
-  abs(dataSorted[61] - mu) - abs(dataSorted[6] - mu)
-}
+Rmcmc <- buildMCMC(conf)
+
+## short run to look into the output
+# test <- runMCMC(Rmcmc, niter = 20)
+# test$derived
+
+## 5) define a function that generates new data
 
 control <- list(
   model      = newcomb_model,
@@ -57,7 +79,7 @@ control <- list(
   verbose    = TRUE
 )
 
-## function that generates new data
+
 newcombNewData <- function(thetaRow, control) {
   model      <- control$model
   dataNames  <- control$dataNames
@@ -72,30 +94,28 @@ newcombNewData <- function(thetaRow, control) {
 }
 
 ##########################################
-# 0) Run MCMC
-samples <- nimbleMCMC(
-  newcomb_model,
-  niter   = 5000,
-  nburnin = 1000,
-  monitors = paramNames
-)
-MCMCSamples <- as.matrix(samples)
-head(MCMCSamples)
+# Compile and run MCMC
 
-##  Check simulation
-# control <- list(
-#   model      = newcomb_model,
-#   dataNames  = dataNames,
-#   paramNames = paramNames
-# )
-#
-# theta1 <- MCMCSamples[1, , drop = TRUE]
-# ySim1 <- newcombNewData(thetaRow = theta1, control = control)
-#
-# str(ySim1)
-# length(ySim1)
+Cnewcomb_model <- compileNimble(newcomb_model)
+Cmcmc <- compileNimble(Rmcmc, project = newcomb_model)
+
+out <- runMCMC(
+  Cmcmc,
+  niter   = 5000,
+  nburnin = 1000
+)
+is(out)
+
+MCMCSamples <- as.matrix(out$samples)
+discSamples <- as.matrix(out$derived$discrepancy)
+head(MCMCSamples)
+head(discSamples)
+
+
 ########################################################
 ## Build disc_fun via the package helper
+## In this case the discrepancy function will just take the
+##
 
 discConfig <- list(
   simulateNewDataFun = newcombNewData,

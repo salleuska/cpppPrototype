@@ -46,10 +46,19 @@ runCalibration <- function(
     ...
 ) {
 
-  MCMCSamples <- as.matrix(MCMCSamples)
-  nDraws      <- nrow(MCMCSamples)
-  if (nDraws < 1L) stop("MCMCSamples must contain at least one row.")
+  ## Check that MCMCSamples is matrix
+  if (!is.matrix(MCMCSamples)) {
+    stop("MCMCSamples must be a numeric matrix with one row per posterior draw.")
+  }
 
+  if (!is.numeric(MCMCSamples)) {
+    stop("MCMCSamples must be a numeric matrix.")
+  }
+
+  nDraws <- nrow(MCMCSamples)
+  if (is.null(nDraws) || nDraws < 1L) {
+    stop("MCMCSamples must contain at least one row.")
+  }
   ## check what controls contains by role
   mcmcControl <- if (!is.null(control$mcmc)) control$mcmc else control
   discControl <- if (!is.null(control$disc)) control$disc else control
