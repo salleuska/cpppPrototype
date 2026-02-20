@@ -4,7 +4,7 @@
 
 ## 1) Packages
 library(nimble)
-library(cpppPrototype)
+library(cppp)
 
 ## 2) Data: Newcomb light-speed measurements
 lightPath <- system.file("examples", "light.txt", package = "cpppPrototype")

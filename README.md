@@ -63,7 +63,7 @@ Other possible helpers?
 | Function | Role |
 |-----------|------|
 | `make_data_sim_fun()` | Returns a function that simulates new datasets $\tilde y$. |
-| `make_MCMCfun()` | [need to check what that was] |
+| `make_MCMCfun()` | ??  |
 
 ### Data object
 

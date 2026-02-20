@@ -2,7 +2,7 @@
 ## Newcomb example in pure R (no NIMBLE)
 ## Uses: runCalibration() + makeOfflineDiscFun() from cpppPrototype
 ############################################################
-library(cpppPrototype)
+library(cppp)
 
 ## 1) Data
 lightPath <- system.file("examples", "light.txt", package = "cpppPrototype")
