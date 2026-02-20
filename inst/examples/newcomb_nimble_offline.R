@@ -7,14 +7,14 @@
 # install_github("nimble-dev/nimble",
 # 	subdir = "packages/nimble", #subdir
 # 	ref = "derived_discrepancy",   #branch
-# 	lib = "/opt/homebrew/Cellar/r/4.5.1/dev/") #local library
+# 	lib = "/opt/homebrew/Cellar/r/4.5.2/dev/") #local library
 
 ## 1) Packages
-library(nimble, lib.loc="/opt/homebrew/Cellar/r/4.5.1/dev")
+library(nimble, lib.loc="/opt/homebrew/Cellar/r/4.5.2/dev")
 library(cppp)
 
 ## 2) Data: Newcomb light-speed measurements
-lightPath <- system.file("examples", "light.txt", package = "cpppPrototype")
+lightPath <- system.file("examples", "light.txt", package = "cppp")
 newcombData <- list(y = read.table(lightPath)$V1)
 
 constants <- list(n = length(newcombData$y))

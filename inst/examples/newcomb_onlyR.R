@@ -1,11 +1,11 @@
 ############################################################
 ## Newcomb example in pure R (no NIMBLE)
-## Uses: runCalibration() + makeOfflineDiscFun() from cpppPrototype
+## Uses: runCalibration() + makeOfflineDiscFun() from cppp
 ############################################################
 library(cppp)
 
 ## 1) Data
-lightPath <- system.file("examples", "light.txt", package = "cpppPrototype")
+lightPath <- system.file("examples", "light.txt", package = "cppp")
 
 yObs <- read.table(lightPath)$V1
 n <- length(yObs)

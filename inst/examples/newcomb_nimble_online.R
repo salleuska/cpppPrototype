@@ -7,7 +7,7 @@ library(nimble)
 library(cppp)
 
 ## 2) Data: Newcomb light-speed measurements
-lightPath <- system.file("examples", "light.txt", package = "cpppPrototype")
+lightPath <- system.file("examples", "light.txt", package = "cppp")
 newcombData <- list(y = read.table(lightPath)$V1)
 
 constants <- list(n = length(newcombData$y))
